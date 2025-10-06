@@ -1,0 +1,4 @@
+hash: d95deecab67d040059987a8e14de5b6e4d64974975ec753d1b9dfb047d7cf512
+videoId: 12730235-c925-4c1b-b243-77daf1a9413f
+address: tokyo_fuchu_Miyoshicho 3-chome
+createdAt: 2025-10-06T05:41:34.603Z
