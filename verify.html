@@ -85,14 +85,16 @@
       hash: params.get("hash"),
     };
 
-    // --- JST変換関数（修正版） ---
+    // --- JST変換関数（最終確定版・二重変換防止） ---
     function toJST(utcString) {
       try {
         if (!utcString || utcString === "(未指定)") return "(未指定)";
-        const date = new Date(utcString); // 自動でローカル(JST)に変換される
-        if (isNaN(date)) return "(変換できません)";
+        // UTC文字列をDate化（ブラウザが自動でローカル＝JSTに変換）
+        const utcDate = new Date(utcString);
+        if (isNaN(utcDate)) return "(変換できません)";
         const pad = n => String(n).padStart(2, "0");
-        return `${date.getFullYear()}/${pad(date.getMonth()+1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} (JST)`;
+        // JSTとしてそのまま出力（追加の+9時間補正は不要）
+        return `${utcDate.getFullYear()}/${pad(utcDate.getMonth()+1)}/${pad(utcDate.getDate())} ${pad(utcDate.getHours())}:${pad(utcDate.getMinutes())}:${pad(utcDate.getSeconds())} (JST)`;
       } catch {
         return "(変換エラー)";
       }
