@@ -131,5 +131,12 @@
     "videoId": "83804078-a32e-4b51-b693-d5424b3c4954",
     "address": "tokyo_suginami_horinouchi_2",
     "createdAt": "2025-11-01T23:27:10.944Z"
+  },
+  {
+    "id": "77b172c5-aed6-476a-8c9d-543df3387af9",
+    "hash": "0a837cd351fb25d85cc8ad7ca2f261fdd8b54981ac17e007def315b04d9297c9",
+    "videoId": "77b172c5-aed6-476a-8c9d-543df3387af9",
+    "address": "tokyo_suginami_horinouchi_2",
+    "createdAt": "2025-11-02T23:31:59.930Z"
   }
 ]
