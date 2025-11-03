@@ -1,0 +1,7 @@
+hash: abcdef1234567890
+
+videoId: test_logger_001
+
+address: Tokyo Suginami Test
+
+createdAt: 2025-11-03T11:33:12.154Z
