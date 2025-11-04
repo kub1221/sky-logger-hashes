@@ -103,14 +103,18 @@
       hash: params.get("hash")
     };
 
-    // --- JST変換関数（正確補正 +9h）---
+    // --- JST変換関数（自動ローカル変換・+9h補正なし）---
     function toJST(utcString) {
       if (!utcString) return "(未指定)";
-      const date = new Date(utcString);
-      if (isNaN(date)) return "(変換不可)";
-      const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-      const p = n => String(n).padStart(2,"0");
-      return `${jst.getFullYear()}/${p(jst.getMonth()+1)}/${p(jst.getDate())} ${p(jst.getHours())}:${p(jst.getMinutes())}:${p(jst.getSeconds())} (JST)`;
+      try {
+        const date = new Date(utcString); // UTC → JST自動変換
+        if (isNaN(date.getTime())) return "(変換不可)";
+        const p = n => String(n).padStart(2, "0");
+        return `${date.getFullYear()}/${p(date.getMonth()+1)}/${p(date.getDate())} `
+             + `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())} (JST)`;
+      } catch {
+        return "(変換エラー)";
+      }
     }
 
     // --- メイン表示 ---
