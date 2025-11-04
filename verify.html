@@ -84,7 +84,7 @@
     🔗 Firestore と GitHub の照合結果を見る
   </a>
 
-  <a href="https://kub1221.github.io/skylogger-verifier/"
+  <a href="https://kub1221.github.io/sky-logger-hashes/"
      target="_blank"
      class="link-button"
      style="background:#005fa3;">
@@ -92,8 +92,8 @@
   </a>
 
   <script>
-    // --- URLパラメータ取得 ---
-    const params = new URLSearchParams(window.location.search);
+    // --- URLパラメータ取得（デコード対応）---
+    const params = new URLSearchParams(decodeURIComponent(window.location.search));
     const data = {
       uuid: params.get("uuid"),
       lat: params.get("lat"),
@@ -103,14 +103,14 @@
       hash: params.get("hash")
     };
 
-    // --- JST変換関数（自動ローカル変換・+9h補正なし）---
+    // --- JST変換関数 ---
     function toJST(utcString) {
       if (!utcString) return "(未指定)";
       try {
-        const date = new Date(utcString); // UTC → JST自動変換
+        const date = new Date(utcString);
         if (isNaN(date.getTime())) return "(変換不可)";
         const p = n => String(n).padStart(2, "0");
-        return `${date.getFullYear()}/${p(date.getMonth()+1)}/${p(date.getDate())} `
+        return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())} `
              + `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())} (JST)`;
       } catch {
         return "(変換エラー)";
@@ -146,7 +146,7 @@
       `;
     }
 
-    // --- 🔗 Firestore照合ページへのリンク生成 ---
+    // --- Firestore照合ページへのリンク生成 ---
     const link = document.getElementById("toCheckLink");
     if (data.file) {
       const m = data.file.match(/_([0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12})\.json$/i);
