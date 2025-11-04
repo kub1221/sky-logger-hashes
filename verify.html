@@ -55,23 +55,41 @@
       margin-top: 10px;
       text-align: center;
     }
-    .verify-button {
+    hr {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 24px 0;
+    }
+    a.link-button {
       display: inline-block;
-      margin-top: 16px;
-      padding: 10px 14px;
-      border-radius: 8px;
       background: #444;
       color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
       text-decoration: none;
       font-weight: bold;
+      transition: background 0.3s;
+      margin: 4px 0;
     }
-    .verify-button:hover { background: #666; }
+    a.link-button:hover { background: #666; }
   </style>
 </head>
-
 <body>
   <h1>📸 Sky Logger Verify</h1>
   <div class="card" id="content">読み込み中...</div>
+
+  <hr>
+
+  <a id="toCheckLink" href="#" style="display:none" target="_blank" class="link-button">
+    🔗 Firestore と GitHub の照合結果を見る
+  </a>
+
+  <a href="https://kub1221.github.io/skylogger-verifier/"
+     target="_blank"
+     class="link-button"
+     style="background:#005fa3;">
+    📘 Sky Logger 検証システムの仕組みを読む
+  </a>
 
   <script>
     // --- URLパラメータ取得 ---
@@ -82,33 +100,25 @@
       lng: params.get("lng"),
       capturedAt: params.get("capturedAt"),
       file: params.get("file"),
-      hash: params.get("hash"),
+      hash: params.get("hash")
     };
 
-    // --- JST変換関数（明示的 +9時間補正 / すべての環境で統一） ---
+    // --- JST変換関数（正確補正 +9h）---
     function toJST(utcString) {
-      try {
-        if (!utcString || utcString === "(未指定)") return "(未指定)";
-        const utcDate = new Date(utcString);
-        if (isNaN(utcDate)) return "(変換できません)";
-        // UTC → JST (+9時間補正)
-        const jst = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
-        const pad = n => String(n).padStart(2, "0");
-        return `${jst.getFullYear()}/${pad(jst.getMonth()+1)}/${pad(jst.getDate())} ${pad(jst.getHours())}:${pad(jst.getMinutes())}:${pad(jst.getSeconds())} (JST)`;
-      } catch {
-        return "(変換エラー)";
-      }
+      if (!utcString) return "(未指定)";
+      const date = new Date(utcString);
+      if (isNaN(date)) return "(変換不可)";
+      const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+      const p = n => String(n).padStart(2,"0");
+      return `${jst.getFullYear()}/${p(jst.getMonth()+1)}/${p(jst.getDate())} ${p(jst.getHours())}:${p(jst.getMinutes())}:${p(jst.getSeconds())} (JST)`;
     }
 
-    // --- HTML生成 ---
+    // --- メイン表示 ---
     const content = document.getElementById("content");
-
     if (!data.uuid) {
       content.innerHTML = `<p>❌ 無効なQRコードです。</p>`;
     } else {
       const jstTime = toJST(data.capturedAt);
-      const firestoreURL = `https://kub1221.github.io/sky-logger-hashes/firestore_viewer.html?videoId=${encodeURIComponent(data.file?.split('_').pop()?.replace('.json', '') ?? '')}`;
-
       content.innerHTML = `
         <p><span class="key">UUID:</span> ${data.uuid}</p>
         <p><span class="key">位置情報:</span> ${data.lat}, ${data.lng}</p>
@@ -126,14 +136,21 @@
            🌍 Googleマップで開く
         </a>
 
-        <a class="verify-button" href="${firestoreURL}" target="_blank">
-           🔗 Firestore と GitHub の照合を見る
-        </a>
-
         <div class="note">
           ※ UTCは国際標準時、JSTは日本時間（UTC+9）です。
         </div>
       `;
+    }
+
+    // --- 🔗 Firestore照合ページへのリンク生成 ---
+    const link = document.getElementById("toCheckLink");
+    if (data.file) {
+      const m = data.file.match(/_([0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12})\.json$/i);
+      if (m) {
+        const videoId = m[1];
+        link.href = `firestore_viewer.html?videoId=${encodeURIComponent(videoId)}`;
+        link.style.display = "inline-block";
+      }
     }
   </script>
 </body>
