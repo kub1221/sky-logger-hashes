@@ -85,14 +85,16 @@
       hash: params.get("hash"),
     };
 
-    // --- JST変換関数（Safari・Chrome共通 / 二重補正防止） ---
+    // --- JST変換関数（明示的 +9時間補正 / すべての環境で統一） ---
     function toJST(utcString) {
       try {
         if (!utcString || utcString === "(未指定)") return "(未指定)";
-        const date = new Date(utcString); // ブラウザが自動でローカル時間に変換
-        if (isNaN(date)) return "(変換できません)";
+        const utcDate = new Date(utcString);
+        if (isNaN(utcDate)) return "(変換できません)";
+        // UTC → JST (+9時間補正)
+        const jst = new Date(utcDate.getTime() + 9 * 60 * 60 * 1000);
         const pad = n => String(n).padStart(2, "0");
-        return `${date.getFullYear()}/${pad(date.getMonth()+1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} (JST)`;
+        return `${jst.getFullYear()}/${pad(jst.getMonth()+1)}/${pad(jst.getDate())} ${pad(jst.getHours())}:${pad(jst.getMinutes())}:${pad(jst.getSeconds())} (JST)`;
       } catch {
         return "(変換エラー)";
       }
