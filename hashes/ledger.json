@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generated_at": "2025-11-04T00:24:19.915Z",
+  "generated_at": "2025-11-04T00:47:18.308Z",
   "logs": [
     {
       "id": "b0808890-6887-432f-980d-635b9a1edd96",
@@ -134,6 +134,13 @@
       "videoId": "0fe9d11e-3bbc-48c5-ba8d-43d403c5567b",
       "address": "tokyo_suginami_horinouchi_2",
       "createdAt": "2025-11-04T00:24:18.393Z"
+    },
+    {
+      "id": "37b3d866-90a5-4570-8b80-95ed671d6653",
+      "hash": "60e324f953bf49983040be505e519f18e1a1a52e0a67973c8da6d11c40d0ac7c",
+      "videoId": "37b3d866-90a5-4570-8b80-95ed671d6653",
+      "address": "tokyo_suginami_horinouchi_2",
+      "createdAt": "2025-11-04T00:47:16.331Z"
     }
   ]
 }
