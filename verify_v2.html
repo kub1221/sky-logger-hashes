@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📸 Sky Logger Verify</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      padding: 40px 12px;
+    }
+    .card {
+      background: #222;
+      display: block;
+      text-align: left;
+      padding: 24px;
+      border-radius: 12px;
+      margin: 0 auto;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    h1 {
+      text-align: center;
+      color: #7ec8ff;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    p { margin: 6px 0; line-height: 1.5; word-break: break-all; }
+    span.key { color: #7ec8ff; font-weight: bold; }
+    .map-button {
+      display: block;
+      background: #0078ff;
+      color: white;
+      padding: 10px 14px;
+      margin: 18px auto 0;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      width: fit-content;
+    }
+    .time-block {
+      background: #1b1b1b;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .note {
+      font-size: 12px;
+      color: #999;
+      margin-top: 10px;
+      text-align: center;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 24px 0;
+    }
+    a.link-button {
+      display: inline-block;
+      background: #444;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s;
+      margin: 4px 0;
+    }
+    a.link-button:hover { background: #666; }
+  </style>
+</head>
+<body>
+  <h1>📸 Sky Logger Verify</h1>
+  <div class="card" id="content">読み込み中...</div>
+
+  <hr>
+
+  <a id="toCheckLink" href="#" style="display:none" target="_blank" class="link-button">
+    🔗 Firestore と GitHub の照合結果を見る
+  </a>
+
+  <a href="https://kub1221.github.io/sky-logger-hashes/"
+     target="_blank"
+     class="link-button"
+     style="background:#005fa3;">
+    📘 Sky Logger 検証システムの仕組みを読む
+  </a>
+
+  <script>
+    // --- URLパラメータ取得（デコード対応）---
+    const params = new URLSearchParams(decodeURIComponent(window.location.search));
+    const data = {
+      uuid: params.get("uuid"),
+      lat: params.get("lat"),
+      lng: params.get("lng"),
+      capturedAt: params.get("capturedAt"),
+      file: params.get("file"),
+      hash: params.get("hash")
+    };
+
+    // --- JST変換関数 ---
+    function toJST(utcString) {
+      if (!utcString) return "(未指定)";
+      try {
+        const date = new Date(utcString);
+        if (isNaN(date.getTime())) return "(変換不可)";
+        const p = n => String(n).padStart(2, "0");
+        return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())} `
+             + `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())} (JST)`;
+      } catch {
+        return "(変換エラー)";
+      }
+    }
+
+    // --- メイン表示 ---
+    const content = document.getElementById("content");
+    if (!data.uuid) {
+      content.innerHTML = `<p>❌ 無効なQRコードです。</p>`;
+    } else {
+      const jstTime = toJST(data.capturedAt);
+      content.innerHTML = `
+        <p><span class="key">UUID:</span> ${data.uuid}</p>
+        <p><span class="key">位置情報:</span> ${data.lat}, ${data.lng}</p>
+
+        <div class="time-block">
+          <p><span class="key">撮影日時 (UTC):</span><br>${data.capturedAt || "(未指定)"}</p>
+          <p><span class="key">撮影日時 (日本時間):</span><br>${jstTime}</p>
+        </div>
+
+        <p><span class="key">ファイル名:</span><br>${data.file || "(不明)"}</p>
+        <p><span class="key">ハッシュ:</span><br>${data.hash || "(不明)"}</p>
+
+        <a class="map-button" target="_blank"
+           href="https://www.google.com/maps?q=${data.lat},${data.lng}">
+           🌍 Googleマップで開く
+        </a>
+
+        <div class="note">
+          ※ UTCは国際標準時、JSTは日本時間（UTC+9）です。
+        </div>
+      `;
+    }
+
+    // --- Firestore照合ページへのリンク生成 ---
+    const link = document.getElementById("toCheckLink");
+    if (data.file) {
+      const m = data.file.match(/_([0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12})\.json$/i);
+      if (m) {
+        const videoId = m[1];
+        link.href = `firestore_viewer.html?videoId=${encodeURIComponent(videoId)}`;
+        link.style.display = "inline-block";
+      }
+    }
+  </script>
+</body>
+</html>
