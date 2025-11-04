@@ -1,4 +1,4 @@
 hash: 4bbe27d271853ddd1383955cebdffc30c38fb45239d843ae432bdbdf3df21229
 videoId: cd890e88-a0d4-4f90-b20f-934e43ca9f8e
 address: tokyo_suginami_horinouchi_2
-createdAt: 2025-11-04T00:13:30.727Z
+createdAt: 2025-11-04T00:13:33.681Z
