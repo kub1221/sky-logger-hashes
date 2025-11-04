@@ -85,12 +85,11 @@
       hash: params.get("hash"),
     };
 
-    // --- JST変換関数（Safari互換・自動補正対応） ---
+    // --- JST変換関数（Safari・Chrome共通 / 二重補正防止） ---
     function toJST(utcString) {
       try {
         if (!utcString || utcString === "(未指定)") return "(未指定)";
-        // Safari等ではnew Date()が自動でローカル(JST)変換される
-        const date = new Date(utcString);
+        const date = new Date(utcString); // ブラウザが自動でローカル時間に変換
         if (isNaN(date)) return "(変換できません)";
         const pad = n => String(n).padStart(2, "0");
         return `${date.getFullYear()}/${pad(date.getMonth()+1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} (JST)`;
