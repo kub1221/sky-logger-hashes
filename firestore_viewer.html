@@ -37,6 +37,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
+    // === Firebase構成 ===
     const firebaseConfig = {
       apiKey: "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA",
       authDomain: "sky-logger-appv1.firebaseapp.com",
@@ -58,7 +59,14 @@
         // --- GitHub ledger.json 読み込み ---
         const ledgerUrl = "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/hashes/ledger.json";
         const ledgerRes = await fetch(ledgerUrl);
-        const ledgerData = await ledgerRes.json();
+        const ledgerJson = await ledgerRes.json();
+
+        // ✅ logs配列を正しく参照
+        const ledgerData = ledgerJson.logs;
+        if (!Array.isArray(ledgerData)) {
+          throw new Error("Invalid ledger.json format: 'logs' field is missing or not an array.");
+        }
+
         output.textContent += `✅ GitHub ledger.json 読み込み成功 (${ledgerData.length}件)\n`;
 
         // --- Firestore public_logs 読み込み ---
@@ -82,6 +90,7 @@
           else
             results.push(`❌ 不一致: ${targetId}\n   Firestore: ${firestoreItem.hash}\n   GitHub: ${ledgerItem.hash}`);
         }
+
         // --- 全体照合モード ---
         else {
           output.textContent += `🗂 全体照合モード\n\n`;
