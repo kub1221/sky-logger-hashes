@@ -1,3 +1,3 @@
 hash: ae2a61edca99d6e434ba16d166b683d70ea9175e2b9fc45b893aa5f753014aaf
 videoId: 1d8afcf8-5bdc-45d8-a29e-1bea1f347ac7
-createdAt: 2025-11-06T13:02:09.153Z
+createdAt: 2025-11-06T13:02:12.667Z
