@@ -89,6 +89,10 @@
 
   <div id="verifyResult" class="result"></div>
 
+  <a id="toCheckLink" href="#" target="_blank" style="display:none" class="link-button">
+    🔗 Firestore上の詳細ログを開く
+  </a>
+
   <a href="https://kub1221.github.io/sky-logger-hashes/"
      target="_blank"
      class="link-button"
@@ -168,6 +172,7 @@
         const found = ledger.logs.find(l => l.hash === data.hash);
         if (found) {
           resultBox.textContent = "✅ このログは元帳と一致しています（改ざんなし）";
+          document.getElementById("toCheckLink").style.display = "inline-block";
         } else {
           resultBox.textContent = "⚠️ このログは元帳に存在しません（未登録または改ざんの可能性）";
         }
@@ -189,6 +194,17 @@
         console.error(err);
       }
     };
+
+    // --- Firestore照合ページへのリンク生成（短縮ID対応） ---
+    const link = document.getElementById("toCheckLink");
+    if (data.file) {
+      // videoId は UUID形式または短縮形式（例: 6047bc9a）どちらも対応
+      const m = data.file.match(/_([0-9a-f-]{7,36})\.json$/i);
+      if (m) {
+        const videoId = m[1];
+        link.href = `firestore_viewer.html?videoId=${encodeURIComponent(videoId)}`;
+      }
+    }
   </script>
 </body>
 </html>
