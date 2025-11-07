@@ -59,13 +59,12 @@
         // --- GitHub ledger.json 読み込み ---
         const ledgerUrl = "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/hashes/ledger.json";
         const ledgerRes = await fetch(ledgerUrl);
+        if (!ledgerRes.ok) throw new Error("ledger.json の取得に失敗しました");
         const ledgerJson = await ledgerRes.json();
 
         // ✅ logs配列を正しく参照
         const ledgerData = ledgerJson.logs;
-        if (!Array.isArray(ledgerData)) {
-          throw new Error("Invalid ledger.json format: 'logs' field is missing or not an array.");
-        }
+        if (!Array.isArray(ledgerData)) throw new Error("ledger.json の形式が不正です（logs 配列なし）");
 
         output.textContent += `✅ GitHub ledger.json 読み込み成功 (${ledgerData.length}件)\n`;
 
@@ -80,13 +79,19 @@
         // --- 個別照合モード ---
         if (targetId) {
           output.textContent += `🎯 個別照合モード：videoId=${targetId}\n\n`;
-          const ledgerItem = ledgerData.find(l => l.id === targetId);
-          const firestoreItem = firestoreData.find(f => f.id === targetId);
 
-          if (!ledgerItem) results.push(`⚠️ GitHubに存在しない: ${targetId}`);
-          else if (!firestoreItem) results.push(`⚠️ Firestoreに存在しない: ${targetId}`);
+          // id か videoId のどちらかで一致するものを探索（短縮IDにも対応）
+          const ledgerItem = ledgerData.find(l => l.id === targetId || l.videoId === targetId);
+          const firestoreItem = firestoreData.find(f => f.id === targetId || f.videoId === targetId);
+
+          if (!ledgerItem && !firestoreItem)
+            results.push(`⚠️ Firestore・GitHub どちらにも存在しません: ${targetId}`);
+          else if (!ledgerItem)
+            results.push(`⚠️ GitHub に存在しません: ${targetId}`);
+          else if (!firestoreItem)
+            results.push(`⚠️ Firestore に存在しません: ${targetId}`);
           else if (ledgerItem.hash === firestoreItem.hash)
-            results.push(`✅ 一致: ${targetId}\n   address: ${ledgerItem.address}\n   hash: ${ledgerItem.hash}`);
+            results.push(`✅ 一致: ${targetId}\n   hash: ${ledgerItem.hash}`);
           else
             results.push(`❌ 不一致: ${targetId}\n   Firestore: ${firestoreItem.hash}\n   GitHub: ${ledgerItem.hash}`);
         }
@@ -95,14 +100,14 @@
         else {
           output.textContent += `🗂 全体照合モード\n\n`;
           for (const log of ledgerData) {
-            const match = firestoreData.find(f => f.id === log.id);
+            const match = firestoreData.find(f => f.id === log.id || f.videoId === log.videoId);
             if (!match) {
-              results.push(`⚠️ Firestoreに存在しない: ${log.id}`);
+              results.push(`⚠️ Firestore に存在しない: ${log.id}`);
               continue;
             }
             const hashMatch = match.hash === log.hash;
             if (hashMatch)
-              results.push(`✅ 一致: ${log.id}\n   address: ${log.address}\n   hash: ${log.hash}`);
+              results.push(`✅ 一致: ${log.id}\n   hash: ${log.hash}`);
             else
               results.push(`❌ 不一致: ${log.id}\n   Firestore: ${match.hash}\n   GitHub: ${log.hash}`);
           }
@@ -114,7 +119,8 @@
           results.join("\n----------------------------------------\n");
 
       } catch (err) {
-        output.innerHTML = `<span class="ng">❌ 読み込みエラー:</span> ${err}`;
+        output.innerHTML = `<span class="ng">❌ 読み込みエラー:</span> ${err.message}`;
+        console.error(err);
       }
     }
 
@@ -124,7 +130,7 @@
       const targetId = params.get("videoId");
       loadAndCompare(targetId);
 
-      // ボタン動作
+      // --- ボタン動作 ---
       document.getElementById("btn-all").onclick = () => {
         window.location.href = "firestore_viewer.html";
       };
