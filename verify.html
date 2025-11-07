@@ -153,9 +153,10 @@
 
     const resultBox = document.getElementById("verifyResult");
 
-    // --- ledger.jsonを取得 ---
+    // --- ledger.jsonを取得（ルート直下対応） ---
     async function fetchLedger() {
-      const res = await fetch("hashes/ledger.json");
+      const url = "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/ledger.json";
+      const res = await fetch(url);
       if (!res.ok) throw new Error("ledger.json 読み込み失敗");
       return await res.json();
     }
