@@ -80,9 +80,17 @@
         if (targetId) {
           output.textContent += `🎯 個別照合モード：videoId=${targetId}\n\n`;
 
-          // id か videoId のどちらかで一致するものを探索（短縮IDにも対応）
-          const ledgerItem = ledgerData.find(l => l.id === targetId || l.videoId === targetId);
-          const firestoreItem = firestoreData.find(f => f.id === targetId || f.videoId === targetId);
+          // ✅ 短縮IDにも対応した比較
+          const ledgerItem = ledgerData.find(l =>
+            l.id === targetId ||
+            l.videoId === targetId ||
+            l.videoId?.startsWith(targetId)
+          );
+          const firestoreItem = firestoreData.find(f =>
+            f.id === targetId ||
+            f.videoId === targetId ||
+            f.videoId?.startsWith(targetId)
+          );
 
           if (!ledgerItem && !firestoreItem)
             results.push(`⚠️ Firestore・GitHub どちらにも存在しません: ${targetId}`);
@@ -100,7 +108,11 @@
         else {
           output.textContent += `🗂 全体照合モード\n\n`;
           for (const log of ledgerData) {
-            const match = firestoreData.find(f => f.id === log.id || f.videoId === log.videoId);
+            const match = firestoreData.find(f =>
+              f.id === log.id ||
+              f.videoId === log.videoId ||
+              f.videoId?.startsWith(log.videoId)
+            );
             if (!match) {
               results.push(`⚠️ Firestore に存在しない: ${log.id}`);
               continue;
