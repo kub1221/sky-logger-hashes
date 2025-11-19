@@ -10,9 +10,6 @@
         sans-serif;
       color-scheme: dark;
     }
-    * {
-      box-sizing: border-box;
-    }
     body {
       margin: 0;
       padding: 0;
@@ -21,8 +18,8 @@
     }
     header {
       padding: 24px 20px 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       background: radial-gradient(circle at top, #243b6b 0, #050710 45%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     .wrap {
       max-width: 960px;
@@ -31,300 +28,175 @@
     h1 {
       margin: 0 0 4px;
       font-size: 22px;
-      letter-spacing: 0.05em;
     }
     .subtitle {
       margin: 0;
       font-size: 13px;
-      opacity: 0.75;
+      opacity: 0.7;
     }
     main {
       padding: 16px 20px 32px;
     }
-    section {
-      margin-bottom: 20px;
-    }
     label {
       font-size: 13px;
-      display: block;
       margin-bottom: 4px;
-      opacity: 0.9;
+      display: block;
     }
     input[type="text"] {
       width: 100%;
       padding: 7px 9px;
       border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(5, 7, 16, 0.9);
-      color: #f5f5f5;
-      font-size: 13px;
-    }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #75bcff;
-      box-shadow: 0 0 0 1px rgba(117, 188, 255, 0.5);
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(5,7,16,0.9);
+      color: #fff;
+      margin-bottom: 10px;
     }
     button {
-      margin-top: 10px;
       padding: 7px 14px;
       border-radius: 999px;
       border: none;
-      font-size: 13px;
       cursor: pointer;
       background: #75bcff;
       color: #050710;
       font-weight: 600;
     }
-    button:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
     .status-box {
       margin-top: 14px;
       padding: 12px 14px;
       border-radius: 8px;
-      background: rgba(15, 20, 40, 0.9);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(20, 28, 48, 0.9);
       font-size: 12px;
-      line-height: 1.6;
       white-space: pre-wrap;
     }
     .status-line {
       display: flex;
-      align-items: flex-start;
       gap: 8px;
       margin-bottom: 4px;
     }
-    .status-line span.icon {
-      font-size: 14px;
-      width: 1.2em;
-      text-align: center;
-    }
-    .status-line span.text {
-      flex: 1;
-    }
-    .status-ok {
-      color: #9be28f;
-    }
-    .status-warn {
-      color: #ffd166;
-    }
-    .status-error {
-      color: #ff6b6b;
-    }
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 1px 4px;
-      border-radius: 4px;
-    }
-    footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 10px 20px 16px;
-      font-size: 11px;
-      opacity: 0.6;
-    }
+    .status-ok { color: #9be28f; }
+    .status-error { color: #ff6b6b; }
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <h1>Sky Logger — Auto Verification</h1>
-    <p class="subtitle">
-      Firestore のログJSONと GitHub Hash Archive の SHA-256 を自動照合して、
-      「改ざんされていないか」を検証するページ。
-    </p>
+    <p class="subtitle">Firestore 公開ログと GitHub ハッシュの完全一致を検証</p>
   </div>
 </header>
 
 <main>
   <div class="wrap">
-    <section>
-      <label for="logId">logId（Firestore / GitHub 共通のドキュメントID）</label>
-      <input id="logId" type="text" placeholder="例: 7df5f3fb-1c77-4db4-9c42-ac462424a87e" />
-      <button id="runBtn">この logId で自動検証を実行</button>
-      <p style="font-size:11px;opacity:.7;margin-top:6px;">
-        URL パラメータ <code>?logId=...</code> でも指定できます。
-      </p>
-    </section>
+    <label for="videoId">videoId（または logId）</label>
+    <input id="videoId" type="text" placeholder="例: d2914b52-ef7b-42cc-9bcc-cb9447f02205" />
+    <button id="runBtn">検証する</button>
 
-    <section>
-      <div id="status" class="status-box">
-        まだ検証は実行されていません。
-      </div>
-    </section>
+    <div id="status" class="status-box">まだ検証されていません。</div>
   </div>
 </main>
 
-<footer>
-  <div class="wrap">
-    このページは Sky Logger システムの内部検証用です（一般ユーザーには公開しない）。<br />
-  </div>
-</footer>
-
 <script>
-  // ================================
-  // 🔧 設定（あなた専用に書き換え済み）
-  // ================================
-
-  // Firestore プロジェクトID
-  const FIREBASE_PROJECT_ID = "sky-logger-appv1";
-
-  // Web API キー
-  const FIRESTORE_API_KEY   = "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA";
-
-  // どのコレクションを照合するか（public_logs）
-  const COLLECTION_PATH     = "public_logs";
-
-  // GitHub Hash Archive
-  const GITHUB_HASH_BASE =
-    "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/hashes";
+  // ========= 設定 =========
+  const PROJECT_ID = "sky-logger-appv1";
+  const API_KEY = "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA";
+  const COLLECTION = "public_logs";
+  const GITHUB_BASE =
+    "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main";
 
   const statusEl = document.getElementById("status");
-  const logIdInput = document.getElementById("logId");
-  const runBtn = document.getElementById("runBtn");
+  const input = document.getElementById("videoId");
 
-  function appendStatus(icon, text, cssClass) {
-    const line = document.createElement("div");
-    line.className = "status-line " + (cssClass || "");
-    line.innerHTML = `<span class="icon">${icon}</span><span class="text">${text}</span>`;
-    statusEl.appendChild(line);
+  function append(icon, text, cls="") {
+    const div = document.createElement("div");
+    div.className = "status-line " + cls;
+    div.innerHTML = `<span>${icon}</span> <span>${text}</span>`;
+    statusEl.appendChild(div);
+  }
+  function reset(text="") {
+    statusEl.innerHTML = text;
+  }
+  function fromUrl() {
+    const p = new URLSearchParams(location.search);
+    return p.get("videoId") || p.get("logId");
   }
 
-  function resetStatus(initialText) {
-    statusEl.textContent = initialText || "";
-  }
-
-  function getLogIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("logId");
-    return id ? id.trim() : null;
-  }
-
-  // ================================
-  // Firestore から1件取得
-  // ================================
-  async function fetchFirestoreDoc(logId) {
+  // ========= Firestore public_logs を取得 =========
+  async function fetchFirestore(videoId) {
     const url =
-      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}` +
-      `/databases/(default)/documents/${COLLECTION_PATH}/${logId}?key=${FIRESTORE_API_KEY}`;
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}` +
+      `/databases/(default)/documents/${COLLECTION}/${videoId}` +
+      `?key=${API_KEY}`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Firestore からの取得に失敗: " + res.status);
-    return await res.json();
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("Firestore 取得失敗: " + r.status);
+    return await r.json();
   }
 
-  // Firestore → ハッシュ対象のJSONに整形
-  function extractFieldsFromFirestoreDoc(doc) {
+  function parseFirestore(doc) {
     const f = doc.fields;
     const v = (x) =>
       x?.stringValue ??
+      x?.timestampValue ??
+      x?.booleanValue ??
       x?.integerValue ??
       x?.doubleValue ??
-      x?.booleanValue ??
-      x?.timestampValue ??
       null;
 
     return {
-      uuid: v(f.uuid),
+      id: doc.name.split("/").pop(),
       videoId: v(f.videoId),
-      finalFileName: v(f.finalFileName),
-      lat: v(f.lat),
-      lng: v(f.lng),
-      capturedAt: v(f.capturedAt),
+      hash: v(f.hash),
+      githubPath: v(f.githubPath)
     };
   }
 
-  // JSONをキー順で整形
-  function canonicalJson(obj) {
-    const sortObject = (o) => {
-      if (o === null || typeof o !== "object") return o;
-      if (Array.isArray(o)) return o.map(sortObject);
-      return Object.fromEntries(
-        Object.keys(o)
-          .sort()
-          .map((k) => [k, sortObject(o[k])])
-      );
-    };
-    return JSON.stringify(sortObject(obj));
+  // ========= GitHub の hash を取得 =========
+  async function fetchGithubHash(githubPath, videoId) {
+    const path = githubPath ?? `hashes/${videoId}.txt`;
+    const url = `${GITHUB_BASE}/${path}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("GitHub 取得失敗: " + r.status);
+    return (await r.text()).trim().split("\n")[0]; // 1行目のみ
   }
 
-  // SHA-256
-  async function sha256Hex(str) {
-    const buf = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(str)
-    );
-    return Array.from(new Uint8Array(buf))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  }
+  // ========= メイン =========
+  async function run() {
+    const videoId = input.value.trim();
+    if (!videoId) return alert("videoId を入力してください");
 
-  // GitHub ハッシュ取得
-  async function fetchGitHubHash(logId) {
-    const url = `${GITHUB_HASH_BASE}/${logId}.txt`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("GitHub のハッシュ取得失敗: " + res.status);
-    return (await res.text()).trim();
-  }
-
-  // ================================
-  // メイン
-  // ================================
-  async function runVerification() {
-    const logId = logIdInput.value.trim();
-    if (!logId) return alert("logId を入力してください");
-
-    resetStatus(`検証中...\nlogId: ${logId}\n`);
-
+    reset("検証中...\n");
     try {
-      appendStatus("⏳", "Firestore ドキュメント取得中…");
-      const doc = await fetchFirestoreDoc(logId);
-      appendStatus("📄", "Firestore ドキュメント取得成功", "status-ok");
+      append("⏳", "Firestore public_logs を取得中…");
+      const doc = await fetchFirestore(videoId);
+      append("📄", "Firestore ドキュメント取得成功", "status-ok");
 
-      const obj = extractFieldsFromFirestoreDoc(doc);
-      appendStatus("🧩", "ハッシュ対象JSON抽出");
+      const fb = parseFirestore(doc);
+      append("ℹ️", `hash(Firestore): ${fb.hash}`);
 
-      const canon = canonicalJson(obj);
-      appendStatus("🔧", "JSON正規化完了");
+      append("⏳", "GitHub ハッシュ取得中…");
+      const gh = await fetchGithubHash(fb.githubPath, fb.videoId);
+      append("ℹ️", `hash(GitHub): ${gh}`);
 
-      appendStatus("⏳", "SHA-256 計算中…");
-      const localHash = await sha256Hex(canon);
-      appendStatus("🔐", `ローカルハッシュ: ${localHash}`, "status-ok");
-
-      appendStatus("⏳", "GitHub ハッシュ取得中…");
-      const remoteHash = await fetchGitHubHash(logId);
-      appendStatus("🔑", `GitHubハッシュ: ${remoteHash}`, "status-ok");
-
-      if (localHash === remoteHash) {
-        appendStatus(
-          "🟢",
-          "完全一致 — 改ざんなし（オリジナルと同一）",
-          "status-ok"
-        );
+      if (fb.hash === gh) {
+        append("🟢", "完全一致 — 改ざんなし", "status-ok");
       } else {
-        appendStatus(
-          "🔴",
-          "不一致 — Firestore または GitHub のどこかが書き換えられた可能性あり",
-          "status-error"
-        );
+        append("🔴", "不一致 — 改ざんの可能性あり", "status-error");
       }
+
     } catch (e) {
-      appendStatus("❌", "エラー: " + e.message, "status-error");
+      append("❌", e.message, "status-error");
     }
   }
 
-  runBtn.addEventListener("click", runVerification);
+  document.getElementById("runBtn").onclick = run;
 
-  window.addEventListener("DOMContentLoaded", () => {
-    const id = getLogIdFromUrl();
+  window.onload = () => {
+    const id = fromUrl();
     if (id) {
-      logIdInput.value = id;
-      runVerification();
+      input.value = id;
+      run();
     }
-  });
+  };
 </script>
 </body>
 </html>
