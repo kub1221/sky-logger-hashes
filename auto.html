@@ -2,200 +2,195 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Sky Logger Auto Verification</title>
+  <title>Sky Logger — Auto Verification</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color-scheme: dark;
     }
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      background: #050710;
-      color: #f5f5f5;
+      margin: 0; padding: 0;
+      background: #050710; color: #f5f5f5;
     }
     header {
       padding: 24px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       background: radial-gradient(circle at top, #243b6b 0, #050710 45%);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .wrap {
-      max-width: 960px;
-      margin: 0 auto;
-    }
-    h1 {
-      margin: 0 0 4px;
-      font-size: 22px;
-    }
-    .subtitle {
-      margin: 0;
-      font-size: 13px;
-      opacity: 0.7;
-    }
-    main {
-      padding: 16px 20px 32px;
-    }
-    label {
-      font-size: 13px;
-      margin-bottom: 4px;
-      display: block;
-    }
+    .wrap { max-width: 960px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .05em; }
+    .subtitle { margin: 0; font-size: 13px; opacity: .78; }
+    main { padding: 16px 20px 32px; }
+    section { margin-bottom: 20px; }
+    label { font-size: 13px; display: block; margin-bottom: 4px; opacity: .9; }
     input[type="text"] {
-      width: 100%;
-      padding: 7px 9px;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(5,7,16,0.9);
-      color: #fff;
-      margin-bottom: 10px;
+      width: 100%; padding: 7px 9px;
+      border-radius: 6px; background: rgba(5,7,16,.9);
+      border: 1px solid rgba(255,255,255,.2);
+      font-size: 13px; color: #f5f5f5;
     }
     button {
-      padding: 7px 14px;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      background: #75bcff;
-      color: #050710;
-      font-weight: 600;
+      margin-top: 10px; padding: 7px 14px;
+      border-radius: 999px; background: #75bcff;
+      border: none; font-weight: 600; cursor: pointer;
+      color: #050710; font-size: 13px;
     }
     .status-box {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 8px;
-      background: rgba(20, 28, 48, 0.9);
-      font-size: 12px;
-      white-space: pre-wrap;
+      margin-top: 14px; padding: 12px 14px;
+      border-radius: 8px; background: rgba(15,20,40,.9);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px; line-height: 1.7; white-space: pre-wrap;
+      min-height: 60px;
     }
-    .status-line {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 4px;
+    .status-line { display:flex; gap:8px; margin-bottom:4px; }
+    .status-line span.icon { width:1.2em; text-align:center; }
+    .status-ok { color:#9be28f; }
+    .status-warn { color:#ffd166; }
+    .status-error { color:#ff6b6b; }
+    .summary-ok,.summary-warn,.summary-error {
+      margin-top:10px; padding:10px 12px; border-radius:8px;
+      font-size:12px;
     }
-    .status-ok { color: #9be28f; }
-    .status-error { color: #ff6b6b; }
+    .summary-ok { background:rgba(23,80,43,.9); border:1px solid rgba(155,226,143,.8); }
+    .summary-warn { background:rgba(80,65,23,.9); border:1px solid rgba(255,209,102,.9); }
+    .summary-error { background:rgba(80,29,28,.9); border:1px solid rgba(255,107,107,.9); }
+    footer {
+      border-top:1px solid rgba(255,255,255,0.08);
+      padding:10px 20px 18px; font-size:11px; opacity:.6;
+    }
   </style>
 </head>
 <body>
+
 <header>
   <div class="wrap">
     <h1>Sky Logger — Auto Verification</h1>
-    <p class="subtitle">Firestore 公開ログと GitHub ハッシュの完全一致を検証</p>
+    <p class="subtitle">
+      Firestore 公開ログ と GitHub ハッシュを照合し、ログ改ざんの有無を自動検証します。
+    </p>
   </div>
 </header>
 
 <main>
   <div class="wrap">
-    <label for="videoId">videoId（または logId）</label>
-    <input id="videoId" type="text" placeholder="例: d2914b52-ef7b-42cc-9bcc-cb9447f02205" />
-    <button id="runBtn">検証する</button>
+    <section>
+      <label for="idInput">videoId / logId</label>
+      <input id="idInput" type="text" placeholder="例: e53434bf-8537-48f2-b32d-af99edff9aec" />
+      <button id="runBtn">この ID で検証する</button>
+      <p style="font-size:11px;opacity:.7;margin-top:6px;">
+        URL パラメータ <code>?videoId=</code> または <code>?logId=</code> が指定されている場合、自動で検証します。
+      </p>
+    </section>
 
-    <div id="status" class="status-box">まだ検証されていません。</div>
+    <section>
+      <div id="summary"></div>
+      <div id="status" class="status-box">まだ検証は実行されていません。</div>
+    </section>
   </div>
 </main>
 
+<footer>
+  <div class="wrap">
+    このページは Sky Logger 検証システムの内部ツールです。
+  </div>
+</footer>
+
 <script>
-  // ========= 設定 =========
-  const PROJECT_ID = "sky-logger-appv1";
+  const FB_PROJECT_ID = "sky-logger-appv1";
   const API_KEY = "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA";
   const COLLECTION = "public_logs";
-  const GITHUB_BASE =
-    "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main";
+  const GH_BASE = "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/";
 
   const statusEl = document.getElementById("status");
-  const input = document.getElementById("videoId");
+  const summaryEl = document.getElementById("summary");
 
+  function resetStatus() { statusEl.innerHTML = ""; }
   function append(icon, text, cls="") {
-    const div = document.createElement("div");
-    div.className = "status-line " + cls;
-    div.innerHTML = `<span>${icon}</span> <span>${text}</span>`;
-    statusEl.appendChild(div);
+    statusEl.innerHTML += `<div class="status-line ${cls}">
+      <span class="icon">${icon}</span><span>${text}</span></div>`;
   }
-  function reset(text="") {
-    statusEl.innerHTML = text;
+  function setSummary(type, text) {
+    summaryEl.innerHTML =
+      `<div class="summary-${type}">${text}</div>`;
   }
-  function fromUrl() {
+
+  function params() {
     const p = new URLSearchParams(location.search);
-    return p.get("videoId") || p.get("logId");
-  }
-
-  // ========= Firestore public_logs を取得 =========
-  async function fetchFirestore(videoId) {
-    const url =
-      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}` +
-      `/databases/(default)/documents/${COLLECTION}/${videoId}` +
-      `?key=${API_KEY}`;
-
-    const r = await fetch(url);
-    if (!r.ok) throw new Error("Firestore 取得失敗: " + r.status);
-    return await r.json();
-  }
-
-  function parseFirestore(doc) {
-    const f = doc.fields;
-    const v = (x) =>
-      x?.stringValue ??
-      x?.timestampValue ??
-      x?.booleanValue ??
-      x?.integerValue ??
-      x?.doubleValue ??
-      null;
-
     return {
-      id: doc.name.split("/").pop(),
-      videoId: v(f.videoId),
-      hash: v(f.hash),
-      githubPath: v(f.githubPath)
+      videoId: p.get("videoId")?.trim() || "",
+      logId: p.get("logId")?.trim() || ""
     };
   }
 
-  // ========= GitHub の hash を取得 =========
-  async function fetchGithubHash(githubPath, videoId) {
-    const path = githubPath ?? `hashes/${videoId}.txt`;
-    const url = `${GITHUB_BASE}/${path}`;
-    const r = await fetch(url);
-    if (!r.ok) throw new Error("GitHub 取得失敗: " + r.status);
-    return (await r.text()).trim().split("\n")[0]; // 1行目のみ
+  async function fetchFS(id) {
+    const url = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${id}?key=${API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Firestore error " + res.status);
+    return await res.json();
   }
 
-  // ========= メイン =========
-  async function run() {
-    const videoId = input.value.trim();
-    if (!videoId) return alert("videoId を入力してください");
+  function extract(doc) {
+    const f = doc.fields;
+    const val = (x)=> x?.stringValue ?? x?.integerValue ?? x?.doubleValue ?? null;
+    return {
+      id: val(f.id),
+      videoId: val(f.videoId),
+      hash: val(f.hash),
+      githubPath: val(f.githubPath),
+    };
+  }
 
-    reset("検証中...\n");
+  async function fetchGH(path) {
+    const url = GH_BASE + path;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("GitHub hash error " + res.status);
+    return (await res.text()).trim();
+  }
+
+  async function verify() {
+    resetStatus();
+    const p = params();
+    const effectiveId =
+      document.getElementById("idInput").value.trim() ||
+      p.videoId || p.logId;
+
+    if (!effectiveId) { alert("ID を入力してください"); return; }
+
+    document.getElementById("idInput").value = effectiveId;
+    append("🔍", `ID: ${effectiveId}`, "status-warn");
+
     try {
-      append("⏳", "Firestore public_logs を取得中…");
-      const doc = await fetchFirestore(videoId);
-      append("📄", "Firestore ドキュメント取得成功", "status-ok");
+      append("⏳", "Firestore を取得中…");
+      const doc = await fetchFS(effectiveId);
+      const log = extract(doc);
+      append("📄", "Firestore ログ取得完了", "status-ok");
 
-      const fb = parseFirestore(doc);
-      append("ℹ️", `hash(Firestore): ${fb.hash}`);
-
+      append("🧩", `hash(Firestore): ${log.hash}`, "status-ok");
       append("⏳", "GitHub ハッシュ取得中…");
-      const gh = await fetchGithubHash(fb.githubPath, fb.videoId);
-      append("ℹ️", `hash(GitHub): ${gh}`);
 
-      if (fb.hash === gh) {
-        append("🟢", "完全一致 — 改ざんなし", "status-ok");
+      const gh = await fetchGH(log.githubPath);
+      append("🔑", `hash(GitHub): ${gh}`, "status-ok");
+
+      if (log.hash === gh) {
+        append("✅", "🔥 Firestore と GitHub の hash が完全一致", "status-ok");
+        setSummary("ok", "このログは改ざんされていません。");
       } else {
-        append("🔴", "不一致 — 改ざんの可能性あり", "status-error");
+        append("❌", "Firestore と GitHub の hash が一致しません", "status-error");
+        setSummary("error", "⚠️ 改ざんの可能性があります。");
       }
 
     } catch (e) {
-      append("❌", e.message, "status-error");
+      append("❌", "エラー: " + e.message, "status-error");
+      setSummary("error", "検証中にエラーが発生しました。");
     }
   }
 
-  document.getElementById("runBtn").onclick = run;
-
+  document.getElementById("runBtn").onclick = verify;
   window.onload = () => {
-    const id = fromUrl();
-    if (id) {
-      input.value = id;
-      run();
-    }
+    const p = params();
+    if (p.videoId || p.logId) verify();
   };
 </script>
 </body>
