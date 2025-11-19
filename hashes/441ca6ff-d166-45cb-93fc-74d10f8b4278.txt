@@ -1,4 +1,0 @@
-hash: 47fa4239d7c536246e1f5f8553601593015fa59154f9c64904b5cfa85e73694f
-videoId: 441ca6ff-d166-45cb-93fc-74d10f8b4278
-address: tokyo_inagi_yanokuchi
-createdAt: 2025-10-12T03:56:42.043Z

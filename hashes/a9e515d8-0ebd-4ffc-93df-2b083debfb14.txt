@@ -1,3 +1,0 @@
-hash: 51d8b8ba83cb4d224e2fa751b1ddb0255ea2ecd893c288939e28c441a8711fed
-videoId: a9e515d8-0ebd-4ffc-93df-2b083debfb14
-createdAt: 2025-11-06T13:12:36.664Z

@@ -1,4 +1,0 @@
-hash: b579afe3c6a5e1d5fd0898b1fcd999c89e91daff8677a4dba6fbd11f68e54741
-videoId: 6987bce2-5d30-434e-a1c4-7aaeab13bc89
-address: tokyo_suginami_horinouchi_2
-createdAt: 2025-10-28T05:15:19.470Z
