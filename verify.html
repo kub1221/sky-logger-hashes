@@ -171,7 +171,7 @@
         videoId / logId （通常はQRコードのURLから自動入力されます）
       </label>
       <input id="idInput" type="text"
-             placeholder="例: 8ea0a471-2870-4449-8ca1-baacb6e8624a" />
+             placeholder="例: a25c8000-4a5a-4bbe-82cc-6f6ec65d9d0d" />
       <button id="runBtn">この ID で検証を実行する</button>
       <p style="font-size:11px;opacity:.7;margin-top:6px;">
         URL パラメータ <code>?videoId=...</code> または
@@ -239,14 +239,14 @@
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
-    const videoId = params.get("videoId");
-    const logId   = params.get("logId");
-    const hash    = params.get("hash");
+    const videoId   = params.get("videoId");
+    const logId     = params.get("logId");
+    const hash      = params.get("hash");
     const createdAt = params.get("createdAt");
     return {
-      videoId: videoId ? videoId.trim() : "",
-      logId: logId ? logId.trim() : "",
-      hash: hash ? hash.trim() : "",
+      videoId:   videoId   ? videoId.trim()   : "",
+      logId:     logId     ? logId.trim()     : "",
+      hash:      hash      ? hash.trim()      : "",
       createdAt: createdAt ? createdAt.trim() : "",
     };
   }
@@ -281,8 +281,13 @@
       x?.timestampValue ??
       null;
 
+    const nameId =
+      typeof doc.name === "string"
+        ? doc.name.split("/").pop()
+        : null;
+
     return {
-      id: v(f.id),
+      id: v(f.id) || nameId,
       videoId: v(f.videoId),
       hash: v(f.hash),
       githubPath: v(f.githubPath),
