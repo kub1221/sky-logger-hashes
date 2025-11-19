@@ -161,33 +161,26 @@
 <footer>
   <div class="wrap">
     このページは Sky Logger システムの内部検証用です（一般ユーザーには公開しない）。<br />
-    実際に署名に使う JSON の構成やキー名は、アプリ側の実装に合わせて
-    <code>extractFieldsFromFirestoreDoc()</code> 内を調整してください。
   </div>
 </footer>
 
 <script>
   // ================================
-  // ✅ 設定（ここをあなたの環境に合わせて書き換える）
+  // 🔧 設定（あなた専用に書き換え済み）
   // ================================
 
-  // ✅ TODO: Firestore のプロジェクトID
-  const FIREBASE_PROJECT_ID = "YOUR_PROJECT_ID";
+  // Firestore プロジェクトID
+  const FIREBASE_PROJECT_ID = "sky-logger-appv1";
 
-  // ✅ TODO: Web API キー（すでに firestore_viewer.html で使っている物と同じ）
-  const FIRESTORE_API_KEY = "YOUR_FIRESTORE_API_KEY";
+  // Web API キー
+  const FIRESTORE_API_KEY   = "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA";
 
-  // ✅ TODO: どのコレクションのログを検証するか
-  //   例: "logs" または "public_logs"
-  const COLLECTION_PATH = "logs";
+  // どのコレクションを照合するか（public_logs）
+  const COLLECTION_PATH     = "public_logs";
 
-  // GitHub Hash Archive の raw ベースURL（あなたのリポジトリに固定）
+  // GitHub Hash Archive
   const GITHUB_HASH_BASE =
     "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/hashes";
-
-  // ================================
-  // ユーティリティ
-  // ================================
 
   const statusEl = document.getElementById("status");
   const logIdInput = document.getElementById("logId");
@@ -196,225 +189,139 @@
   function appendStatus(icon, text, cssClass) {
     const line = document.createElement("div");
     line.className = "status-line " + (cssClass || "");
-    const iconSpan = document.createElement("span");
-    iconSpan.className = "icon";
-    iconSpan.textContent = icon;
-    const textSpan = document.createElement("span");
-    textSpan.className = "text";
-    textSpan.textContent = text;
-    line.appendChild(iconSpan);
-    line.appendChild(textSpan);
+    line.innerHTML = `<span class="icon">${icon}</span><span class="text">${text}</span>`;
     statusEl.appendChild(line);
   }
 
   function resetStatus(initialText) {
-    statusEl.textContent = "";
-    if (initialText) {
-      const p = document.createElement("div");
-      p.textContent = initialText;
-      p.style.fontSize = "12px";
-      statusEl.appendChild(p);
-    }
+    statusEl.textContent = initialText || "";
   }
 
   function getLogIdFromUrl() {
-    const search = new URLSearchParams(window.location.search);
-    const id = search.get("logId");
-    return id && id.trim().length > 0 ? id.trim() : null;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("logId");
+    return id ? id.trim() : null;
   }
 
   // ================================
-  // Firestore からドキュメント取得
+  // Firestore から1件取得
   // ================================
-
   async function fetchFirestoreDoc(logId) {
-    // Firestore REST API
     const url =
-      "https://firestore.googleapis.com/v1/projects/" +
-      encodeURIComponent(FIREBASE_PROJECT_ID) +
-      "/databases/(default)/documents/" +
-      encodeURIComponent(COLLECTION_PATH) +
-      "/" +
-      encodeURIComponent(logId) +
-      "?key=" +
-      encodeURIComponent(FIRESTORE_API_KEY);
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}` +
+      `/databases/(default)/documents/${COLLECTION_PATH}/${logId}?key=${FIRESTORE_API_KEY}`;
 
     const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error("Firestore からの取得に失敗しました: " + res.status);
-    }
+    if (!res.ok) throw new Error("Firestore からの取得に失敗: " + res.status);
     return await res.json();
   }
 
-  // ================================
-  // Firestore ドキュメント → ハッシュ対象JSONへ変換
-  // ================================
-  // ここが一番「あなたの実装に合わせて調整すべき場所」です。
-  //
-  // 現在の想定：
-  //   - Firestore の fields に
-  //       uuid, videoId, finalFileName, lat, lng, capturedAt
-  //     などが入っており、それを元にハッシュを作っている。
-  //
-  // ※ 実際のキー名が違う場合は、ここを書き換えてください。
-  //
+  // Firestore → ハッシュ対象のJSONに整形
   function extractFieldsFromFirestoreDoc(doc) {
-    if (!doc || !doc.fields) {
-      throw new Error("Firestore ドキュメント形式が想定と違います（fields が無い）");
-    }
     const f = doc.fields;
+    const v = (x) =>
+      x?.stringValue ??
+      x?.integerValue ??
+      x?.doubleValue ??
+      x?.booleanValue ??
+      x?.timestampValue ??
+      null;
 
-    // Firestore の Value 型から素の値を取り出すヘルパー
-    const v = (field) => {
-      if (!field) return null;
-      if ("stringValue" in field) return field.stringValue;
-      if ("integerValue" in field) return Number(field.integerValue);
-      if ("doubleValue" in field) return Number(field.doubleValue);
-      if ("booleanValue" in field) return !!field.booleanValue;
-      if ("timestampValue" in field) return field.timestampValue;
-      // 必要に応じて他の型にも対応
-      return null;
-    };
-
-    // ✅ TODO: 実際にハッシュの計算対象にしているフィールドだけをここに並べる
-    const obj = {
+    return {
       uuid: v(f.uuid),
       videoId: v(f.videoId),
       finalFileName: v(f.finalFileName),
       lat: v(f.lat),
       lng: v(f.lng),
-      capturedAt: v(f.capturedAt), // UTC ISO 文字列など
+      capturedAt: v(f.capturedAt),
     };
-
-    // 不要な undefined を削る
-    Object.keys(obj).forEach((k) => {
-      if (obj[k] === undefined || obj[k] === null) {
-        delete obj[k];
-      }
-    });
-
-    return obj;
   }
 
-  // ================================
-  // JSON をキー順で正規化して文字列化
-  // ================================
+  // JSONをキー順で整形
   function canonicalJson(obj) {
-    function sortObject(value) {
-      if (value === null || typeof value !== "object") return value;
-      if (Array.isArray(value)) return value.map(sortObject);
-      const sortedKeys = Object.keys(value).sort();
-      const result = {};
-      for (const k of sortedKeys) {
-        result[k] = sortObject(value[k]);
-      }
-      return result;
-    }
-
-    const sorted = sortObject(obj);
-    // スペース無しの minify JSON
-    return JSON.stringify(sorted);
+    const sortObject = (o) => {
+      if (o === null || typeof o !== "object") return o;
+      if (Array.isArray(o)) return o.map(sortObject);
+      return Object.fromEntries(
+        Object.keys(o)
+          .sort()
+          .map((k) => [k, sortObject(o[k])])
+      );
+    };
+    return JSON.stringify(sortObject(obj));
   }
 
-  // ================================
-  // SHA-256（Web Crypto API）
-  // ================================
+  // SHA-256
   async function sha256Hex(str) {
-    const enc = new TextEncoder();
-    const data = enc.encode(str);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    const buf = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(str)
+    );
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
   }
 
-  // ================================
-  // GitHub からハッシュ取得
-  // ================================
+  // GitHub ハッシュ取得
   async function fetchGitHubHash(logId) {
-    const url = `${GITHUB_HASH_BASE}/${encodeURIComponent(logId)}.txt`;
+    const url = `${GITHUB_HASH_BASE}/${logId}.txt`;
     const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error("GitHub からのハッシュ取得に失敗しました: " + res.status);
-    }
-    const text = await res.text();
-    // 改行などを除去して1行ハッシュに
-    return text.trim();
+    if (!res.ok) throw new Error("GitHub のハッシュ取得失敗: " + res.status);
+    return (await res.text()).trim();
   }
 
   // ================================
-  // メイン処理
+  // メイン
   // ================================
   async function runVerification() {
     const logId = logIdInput.value.trim();
-    if (!logId) {
-      alert("logId を入力してください。");
-      return;
-    }
+    if (!logId) return alert("logId を入力してください");
 
-    resetStatus("検証を開始します…");
-    runBtn.disabled = true;
+    resetStatus(`検証中...\nlogId: ${logId}\n`);
 
     try {
-      appendStatus("🔹", `logId: ${logId}`);
-
-      // 1. Firestore ドキュメント取得
-      appendStatus("⏳", "Firestore からドキュメントを取得中…");
+      appendStatus("⏳", "Firestore ドキュメント取得中…");
       const doc = await fetchFirestoreDoc(logId);
-      appendStatus("✅", "Firestore ドキュメント取得成功。", "status-ok");
+      appendStatus("📄", "Firestore ドキュメント取得成功", "status-ok");
 
-      // 2. ハッシュ対象の JSON 抽出
-      const objForHash = extractFieldsFromFirestoreDoc(doc);
-      appendStatus(
-        "📄",
-        "ハッシュ対象のフィールドを抽出しました（uuid / videoId / finalFileName など）。"
-      );
+      const obj = extractFieldsFromFirestoreDoc(doc);
+      appendStatus("🧩", "ハッシュ対象JSON抽出");
 
-      // 3. キー順にソートして JSON 文字列へ
-      const canon = canonicalJson(objForHash);
-      appendStatus("🧩", "キー順でソートした JSON を生成しました。");
+      const canon = canonicalJson(obj);
+      appendStatus("🔧", "JSON正規化完了");
 
-      // 4. SHA-256 計算
-      appendStatus("⏳", "SHA-256 を計算中…");
+      appendStatus("⏳", "SHA-256 計算中…");
       const localHash = await sha256Hex(canon);
-      appendStatus("🔐", `ローカルで計算したハッシュ: ${localHash}`, "status-ok");
+      appendStatus("🔐", `ローカルハッシュ: ${localHash}`, "status-ok");
 
-      // 5. GitHub から既存ハッシュを取得
-      appendStatus("⏳", "GitHub Hash Archive からハッシュを取得中…");
+      appendStatus("⏳", "GitHub ハッシュ取得中…");
       const remoteHash = await fetchGitHubHash(logId);
-      appendStatus("🔑", `GitHub に保存されているハッシュ: ${remoteHash}`, "status-ok");
+      appendStatus("🔑", `GitHubハッシュ: ${remoteHash}`, "status-ok");
 
-      // 6. 比較
       if (localHash === remoteHash) {
         appendStatus(
           "🟢",
-          "ハッシュが完全一致しました。このログは GitHub に保存された当時から改ざんされていないと判断できます。",
+          "完全一致 — 改ざんなし（オリジナルと同一）",
           "status-ok"
         );
       } else {
         appendStatus(
           "🔴",
-          "ハッシュが一致しません。Firestore 上のログJSON または GitHub ハッシュが、どこかのタイミングで変更された可能性があります。",
+          "不一致 — Firestore または GitHub のどこかが書き換えられた可能性あり",
           "status-error"
         );
       }
-    } catch (err) {
-      console.error(err);
-      appendStatus("❌", "検証中にエラーが発生しました: " + err.message, "status-error");
-    } finally {
-      runBtn.disabled = false;
+    } catch (e) {
+      appendStatus("❌", "エラー: " + e.message, "status-error");
     }
   }
 
-  // ================================
-  // イベント設定
-  // ================================
   runBtn.addEventListener("click", runVerification);
 
-  // URL に logId が付いていたら自動実行
   window.addEventListener("DOMContentLoaded", () => {
-    const logIdFromUrl = getLogIdFromUrl();
-    if (logIdFromUrl) {
-      logIdInput.value = logIdFromUrl;
+    const id = getLogIdFromUrl();
+    if (id) {
+      logIdInput.value = id;
       runVerification();
     }
   });
