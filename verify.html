@@ -2,16 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Sky Logger — Verify</title>
+  <title>Sky Logger — Auto Verification</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
       color-scheme: dark;
-    }
-    * {
-      box-sizing: border-box;
     }
     body {
       margin: 0;
@@ -59,11 +56,6 @@
       color: #f5f5f5;
       font-size: 13px;
     }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #75bcff;
-      box-shadow: 0 0 0 1px rgba(117, 188, 255, 0.5);
-    }
     button {
       margin-top: 10px;
       padding: 7px 14px;
@@ -74,10 +66,6 @@
       background: #75bcff;
       color: #050710;
       font-weight: 600;
-    }
-    button:disabled {
-      opacity: 0.4;
-      cursor: default;
     }
     .status-box {
       margin-top: 14px;
@@ -96,54 +84,22 @@
       gap: 8px;
       margin-bottom: 4px;
     }
-    .status-line span.icon {
-      font-size: 14px;
-      width: 1.2em;
-      text-align: center;
-    }
-    .status-line span.text {
-      flex: 1;
-    }
-    .status-ok {
-      color: #9be28f;
-    }
-    .status-warn {
-      color: #ffd166;
-    }
-    .status-error {
-      color: #ff6b6b;
+    .status-ok { color: #9be28f; }
+    .status-error { color: #ff6b6b; }
+    .status-warn { color: #ffd166; }
+    .summary-ok, .summary-error {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
     }
     .summary-ok {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
       background: rgba(23, 80, 43, 0.9);
       border: 1px solid rgba(155, 226, 143, 0.8);
-      font-size: 12px;
-    }
-    .summary-warn {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      background: rgba(80, 65, 23, 0.9);
-      border: 1px solid rgba(255, 209, 102, 0.9);
-      font-size: 12px;
     }
     .summary-error {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 8px;
       background: rgba(80, 29, 28, 0.9);
       border: 1px solid rgba(255, 107, 107, 0.9);
-      font-size: 12px;
-    }
-    code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 1px 4px;
-      border-radius: 4px;
     }
     footer {
       border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -153,13 +109,13 @@
     }
   </style>
 </head>
+
 <body>
 <header>
   <div class="wrap">
     <h1>Sky Logger — Auto Verification</h1>
     <p class="subtitle">
-      QRコードのURL・Firestore 公開ログ・GitHub ハッシュの 3者を照合して、
-      「ログが改ざんされていないか」を検証するページです。
+      QRコードのURL・Firestore 公開ログ・GitHub ハッシュの3者を照合して、改ざんの有無を検証します。
     </p>
   </div>
 </header>
@@ -167,315 +123,169 @@
 <main>
   <div class="wrap">
     <section>
-      <label for="idInput">
-        videoId / logId （通常はQRコードのURLから自動入力されます）
-      </label>
-      <input id="idInput" type="text"
-             placeholder="例: a25c8000-4a5a-4bbe-82cc-6f6ec65d9d0d" />
-      <button id="runBtn">この ID で検証を実行する</button>
-      <p style="font-size:11px;opacity:.7;margin-top:6px;">
-        URL パラメータ <code>?videoId=...</code> または
-        <code>?logId=...</code> が指定されている場合、
-        ページ表示時に自動で検証が実行されます。
-      </p>
+      <label for="idInput">videoId / logId</label>
+      <input id="idInput" type="text" placeholder="例: a25c8000-4a5a-4bbe-82cc-6f6ec65d9d0d" />
+      <button id="runBtn">このIDで検証する</button>
     </section>
 
     <section>
       <div id="summary"></div>
-      <div id="status" class="status-box">
-        まだ検証は実行されていません。
-      </div>
+      <div id="status" class="status-box">まだ検証は実行されていません。</div>
     </section>
   </div>
 </main>
 
 <footer>
   <div class="wrap">
-    このページは Sky Logger システムの検証用ツールです。
-    <br />映像そのものの真偽ではなく、「ログ記録が改ざんされていないか」を確認します。
+    このツールは Sky Logger の公開検証ページです。
+    Firestore と GitHub の整合性を第三者が確認できます。
   </div>
 </footer>
 
 <script>
-  // ================================
-  // 🔧 設定
-  // ================================
-
   const FIREBASE_PROJECT_ID = "sky-logger-appv1";
   const FIRESTORE_API_KEY   = "AIzaSyA9mECKLUUpyaLsVLZJjq7KeZOEVzA";
   const COLLECTION_PATH     = "public_logs";
-
-  // GitHub ルート（githubPath フィールドを後ろに付ける）
-  const GITHUB_BASE_RAW =
+  const GITHUB_BASE_RAW     =
     "https://raw.githubusercontent.com/kub1221/sky-logger-hashes/main/";
 
   const statusEl  = document.getElementById("status");
   const summaryEl = document.getElementById("summary");
   const idInput   = document.getElementById("idInput");
-  const runBtn    = document.getElementById("runBtn");
 
-  function appendStatus(icon, text, cssClass) {
+  function appendStatus(icon, text, cls) {
     const line = document.createElement("div");
-    line.className = "status-line " + (cssClass || "");
-    line.innerHTML =
-      `<span class="icon">${icon}</span><span class="text">${text}</span>`;
+    line.className = "status-line " + (cls || "");
+    line.innerHTML = `<span>${icon}</span><span>${text}</span>`;
     statusEl.appendChild(line);
   }
 
-  function resetStatus(initialText) {
-    statusEl.textContent = initialText || "";
+  function resetStatus() {
+    statusEl.innerHTML = "";
   }
 
   function setSummary(type, text) {
     summaryEl.innerHTML = "";
-    if (!text) return;
     const div = document.createElement("div");
-    if (type === "ok") div.className = "summary-ok";
-    else if (type === "warn") div.className = "summary-warn";
-    else div.className = "summary-error";
+    div.className = type === "ok" ? "summary-ok" : "summary-error";
     div.textContent = text;
     summaryEl.appendChild(div);
   }
 
   function getUrlParams() {
-    const params = new URLSearchParams(window.location.search);
-    const videoId   = params.get("videoId");
-    const logId     = params.get("logId");
-    const hash      = params.get("hash");
-    const createdAt = params.get("createdAt");
+    const p = new URLSearchParams(window.location.search);
     return {
-      videoId:   videoId   ? videoId.trim()   : "",
-      logId:     logId     ? logId.trim()     : "",
-      hash:      hash      ? hash.trim()      : "",
-      createdAt: createdAt ? createdAt.trim() : "",
+      videoId:  p.get("videoId")?.trim() || "",
+      logId:    p.get("logId")?.trim() || "",
+      hash:     p.get("hash")?.trim() || ""
     };
   }
 
-  // ================================
-  // Firestore から1件取得
-  // ================================
-  async function fetchFirestoreDoc(id) {
+  async function fetchFirestore(id) {
     const url =
-      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}` +
-      `/databases/(default)/documents/${COLLECTION_PATH}/${id}?key=${FIRESTORE_API_KEY}`;
-
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/${id}?key=${FIRESTORE_API_KEY}`;
     const res = await fetch(url);
-    if (res.status === 404) {
-      throw new Error("Firestore に該当するログが見つかりません (404)");
-    }
-    if (!res.ok) {
-      throw new Error("Firestore からの取得に失敗: " + res.status);
-    }
+    if (res.status === 404) throw new Error("Firestore: ログが見つかりません (404)");
+    if (!res.ok) throw new Error("Firestore 取得エラー: " + res.status);
     return await res.json();
   }
 
-  // Firestore → 公開ログ用のフィールド抽出
-  function extractPublicLog(doc) {
-    const f = doc.fields || {};
-
-    const v = (x) =>
-      x?.stringValue ??
-      x?.integerValue ??
-      x?.doubleValue ??
-      x?.booleanValue ??
-      x?.timestampValue ??
-      null;
-
-    const nameId =
-      typeof doc.name === "string"
-        ? doc.name.split("/").pop()
-        : null;
-
+  function extract(doc) {
+    const f = doc.fields;
+    const v = (x) => x?.stringValue ?? x?.timestampValue ?? x?.integerValue ??
+                     x?.doubleValue ?? x?.booleanValue ?? null;
     return {
-      id: v(f.id) || nameId,
-      videoId: v(f.videoId),
-      hash: v(f.hash),
-      githubPath: v(f.githubPath),
-      githubCommit: v(f.githubCommit),
-      createdAt: v(f.createdAt),
-      githubUploadedAt: v(f.githubUploadedAt),
-      verifyUrl: v(f.verifyUrl),
+      id:           v(f.id),
+      videoId:      v(f.videoId),
+      hash:         v(f.hash),
+      githubPath:   v(f.githubPath)
     };
   }
 
-  // GitHub ハッシュ取得（githubPath を使う）
-  async function fetchGitHubHashByPath(path) {
-    if (!path) {
-      throw new Error("Firestore に githubPath がありません。");
-    }
+  async function fetchGithubHash(path) {
     const url = GITHUB_BASE_RAW + path;
     const res = await fetch(url);
-    if (res.status === 404) {
-      throw new Error("GitHub のハッシュファイルが見つかりません (404)");
-    }
-    if (!res.ok) {
-      throw new Error("GitHub ハッシュ取得失敗: " + res.status);
-    }
+    if (!res.ok) throw new Error("GitHub 取得エラー: " + res.status);
     return (await res.text()).trim();
   }
 
-  // ================================
-  // メイン処理
-  // ================================
-  async function runVerification(fromUrlParams) {
-    const urlParams = fromUrlParams || getUrlParams();
-    const effectiveId =
-      idInput.value.trim() ||
-      urlParams.videoId ||
-      urlParams.logId;
+  async function runVerification() {
+    resetStatus();
+    summaryEl.innerHTML = "";
 
-    if (!effectiveId) {
+    const params = getUrlParams();
+    const id = idInput.value.trim() || params.videoId || params.logId;
+
+    if (!id) {
       alert("videoId / logId が指定されていません。");
       return;
     }
+    idInput.value = id;
 
-    idInput.value = effectiveId;
-    setSummary("", "");
-    resetStatus(`検証中...\nID: ${effectiveId}\n`);
+    appendStatus("⏳", "Firestore を取得中…");
 
     try {
-      // 1. URL パラメータの状況
-      if (urlParams.videoId || urlParams.logId || urlParams.hash || urlParams.createdAt) {
-        appendStatus(
-          "🔍",
-          `URL パラメータを解析しました: ` +
-            `videoId=${urlParams.videoId || "-"}, ` +
-            `logId=${urlParams.logId || "-"}, ` +
-            `hash=${urlParams.hash || "-"}, ` +
-            `createdAt=${urlParams.createdAt || "-"}`,
-          "status-ok"
-        );
-      } else {
-        appendStatus(
-          "ℹ️",
-          "URL パラメータは指定されていません（手入力による検証モード）。",
-          "status-warn"
+      const doc = await fetchFirestore(id);
+      const log = extract(doc);
+
+      appendStatus("📄", `Firestore 取得成功（id=${log.id}）`, "status-ok");
+
+      // URL の ID 一致
+      if (params.videoId || params.logId) {
+        const urlId = params.videoId || params.logId;
+        const idOk = (urlId === log.id) && (urlId === log.videoId);
+        appendStatus(idOk ? "✅" : "❌",
+          idOk ? "URL の ID と Firestore の id が一致しました。" :
+                 "URL の ID と Firestore の id が一致しません。",
+          idOk ? "status-ok" : "status-error"
         );
       }
 
-      // 2. Firestore 取得
-      appendStatus("⏳", "Firestore public_logs を取得中…");
-      const doc = await fetchFirestoreDoc(effectiveId);
-      appendStatus("📄", "Firestore ドキュメント取得成功", "status-ok");
+      // URL の hash と一致？
+      if (params.hash) {
+        const hOk = (params.hash === log.hash);
+        appendStatus(hOk ? "✅" : "❌",
+          hOk ? "URL の hash と Firestore の hash が一致しました。" :
+                "URL の hash と Firestore の hash が一致しません。",
+          hOk ? "status-ok" : "status-error"
+        );
+      }
 
-      const log = extractPublicLog(doc);
+      appendStatus("⏳", "GitHub ハッシュ取得中…");
+
+      const gh = await fetchGithubHash(log.githubPath);
+      const fsVsGh = (log.hash === gh);
+
       appendStatus(
-        "🧩",
-        `Firestore ログ情報:\n` +
-          `  id: ${log.id}\n` +
-          `  videoId: ${log.videoId}\n` +
-          `  hash: ${log.hash}\n` +
-          `  createdAt: ${log.createdAt}\n` +
-          `  githubPath: ${log.githubPath}`,
-        "status-ok"
+        fsVsGh ? "🔑" : "❌",
+        fsVsGh ? "Firestore と GitHub のハッシュが完全一致しました。" :
+                 "Firestore と GitHub のハッシュが一致しません。",
+        fsVsGh ? "status-ok" : "status-error"
       );
 
-      // 3. URL vs Firestore の突き合わせ
-      let urlIdOk = true;
-      let urlHashOk = true;
-      let urlCreatedAtOk = true;
-
-      const urlId = urlParams.videoId || urlParams.logId || "";
-      if (urlId) {
-        urlIdOk = (urlId === log.id) && (urlId === log.videoId);
-        appendStatus(
-          urlIdOk ? "✅" : "❌",
-          urlIdOk
-            ? "URL の ID と Firestore(id / videoId) が一致しました。"
-            : "URL の ID と Firestore の id / videoId が一致しません。",
-          urlIdOk ? "status-ok" : "status-error"
-        );
-      }
-
-      if (urlParams.hash) {
-        urlHashOk = urlParams.hash === log.hash;
-        appendStatus(
-          urlHashOk ? "✅" : "❌",
-          urlHashOk
-            ? "URL の hash と Firestore の hash が一致しました。"
-            : "URL の hash と Firestore の hash が一致しません。",
-          urlHashOk ? "status-ok" : "status-error"
-        );
+      if (fsVsGh) {
+        setSummary("ok", "このログは改ざんされていません（完全一致）。");
       } else {
-        appendStatus(
-          "ℹ️",
-          "URL に hash パラメータが含まれていません（旧形式または簡略リンク）。",
-          "status-warn"
-        );
+        setSummary("error", "改ざんの可能性があります。詳細を確認してください。");
       }
 
-      if (urlParams.createdAt) {
-        urlCreatedAtOk = urlParams.createdAt === log.createdAt;
-        appendStatus(
-          urlCreatedAtOk ? "✅" : "❌",
-          urlCreatedAtOk
-            ? "URL の createdAt と Firestore の createdAt が一致しました。"
-            : "URL の createdAt と Firestore の createdAt が一致しません。",
-          urlCreatedAtOk ? "status-ok" : "status-error"
-        );
-      }
-
-      // 4. GitHub ハッシュ取得
-      appendStatus("⏳", "GitHub ハッシュを取得中…");
-      const githubHash = await fetchGitHubHashByPath(log.githubPath);
-      appendStatus(
-        "🔑",
-        `hash(GitHub): ${githubHash}`,
-        "status-ok"
-      );
-
-      const fsVsGithubOk = log.hash === githubHash;
-      appendStatus(
-        fsVsGithubOk ? "✅" : "❌",
-        fsVsGithubOk
-          ? "Firestore の hash と GitHub のハッシュが完全一致しました。"
-          : "Firestore の hash と GitHub のハッシュが一致しません。",
-        fsVsGithubOk ? "status-ok" : "status-error"
-      );
-
-      // 5. 最終判定
-      const allOk =
-        fsVsGithubOk &&
-        (urlId ? urlIdOk : true) &&
-        (urlParams.hash ? urlHashOk : true) &&
-        (urlParams.createdAt ? urlCreatedAtOk : true);
-
-      if (allOk) {
-        setSummary(
-          "ok",
-          "✅ このログは Sky Logger の記録どおりであり、" +
-            "Firestore・GitHub・QRコード URL のいずれにも改ざんの痕跡は見られません。"
-        );
-      } else {
-        setSummary(
-          "error",
-          "⚠️ 一部に不一致があります。URL・Firestore・GitHub のいずれかが変更された可能性があります。" +
-            " 詳細は下のステータス欄をご確認ください。"
-        );
-      }
     } catch (e) {
-      appendStatus("❌", "エラー: " + e.message, "status-error");
-      setSummary(
-        "error",
-        "検証中にエラーが発生しました。ログIDやネットワーク状況をご確認ください。"
-      );
+      appendStatus("❌", e.message, "status-error");
+      setSummary("error", "検証中にエラーが発生しました。");
     }
   }
 
-  runBtn.addEventListener("click", () => {
-    resetStatus("");
-    runVerification();
-  });
+  document.getElementById("runBtn").onclick = runVerification;
 
   window.addEventListener("DOMContentLoaded", () => {
-    const params = getUrlParams();
-    const id = params.videoId || params.logId;
-    if (id) {
-      idInput.value = id;
-      resetStatus("");
-      runVerification(params);
+    const p = getUrlParams();
+    const idParam = p.videoId || p.logId;
+    if (idParam) {
+      idInput.value = idParam;
+      runVerification();
     }
   });
 </script>
+
 </body>
 </html>
