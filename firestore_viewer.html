@@ -32,7 +32,6 @@
     .btn-gray:hover { background: #666; }
   </style>
 
-  <!-- Firebase SDK（Firestore用） -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
@@ -80,7 +79,6 @@
         if (targetId) {
           output.textContent += `🎯 個別照合モード：videoId=${targetId}\n\n`;
 
-          // ✅ 短縮IDにも対応した比較
           const ledgerItem = ledgerData.find(l =>
             l.id === targetId ||
             l.videoId === targetId ||
@@ -92,16 +90,24 @@
             f.videoId?.startsWith(targetId)
           );
 
-          if (!ledgerItem && !firestoreItem)
+          if (!ledgerItem && !firestoreItem) {
             results.push(`⚠️ Firestore・GitHub どちらにも存在しません: ${targetId}`);
-          else if (!ledgerItem)
+          } else if (!ledgerItem) {
             results.push(`⚠️ GitHub に存在しません: ${targetId}`);
-          else if (!firestoreItem)
+          } else if (!firestoreItem) {
             results.push(`⚠️ Firestore に存在しません: ${targetId}`);
-          else if (ledgerItem.hash === firestoreItem.hash)
-            results.push(`✅ 一致: ${targetId}\n   hash: ${ledgerItem.hash}`);
-          else
-            results.push(`❌ 不一致: ${targetId}\n   Firestore: ${firestoreItem.hash}\n   GitHub: ${ledgerItem.hash}`);
+          } else {
+            // ✅ ペア情報の抽出
+            const pairInfo = (firestoreItem.pairGroupId && firestoreItem.role) 
+              ? `\n   🔗 ペア情報: ${firestoreItem.role.toUpperCase()} (ID: ${firestoreItem.pairGroupId})` 
+              : "";
+
+            if (ledgerItem.hash === firestoreItem.hash) {
+              results.push(`✅ 一致: ${targetId}\n   hash: ${ledgerItem.hash}${pairInfo}`);
+            } else {
+              results.push(`❌ 不一致: ${targetId}\n   Firestore: ${firestoreItem.hash}\n   GitHub: ${ledgerItem.hash}${pairInfo}`);
+            }
+          }
         }
 
         // --- 全体照合モード ---
@@ -117,11 +123,18 @@
               results.push(`⚠️ Firestore に存在しない: ${log.id}`);
               continue;
             }
+
+            // ✅ ペア情報の抽出
+            const pairInfo = (match.pairGroupId && match.role) 
+              ? `\n   🔗 ペア情報: ${match.role.toUpperCase()} (ID: ${match.pairGroupId})` 
+              : "";
+
             const hashMatch = match.hash === log.hash;
-            if (hashMatch)
-              results.push(`✅ 一致: ${log.id}\n   hash: ${log.hash}`);
-            else
-              results.push(`❌ 不一致: ${log.id}\n   Firestore: ${match.hash}\n   GitHub: ${log.hash}`);
+            if (hashMatch) {
+              results.push(`✅ 一致: ${log.id}\n   hash: ${log.hash}${pairInfo}`);
+            } else {
+              results.push(`❌ 不一致: ${log.id}\n   Firestore: ${match.hash}\n   GitHub: ${log.hash}${pairInfo}`);
+            }
           }
         }
 
