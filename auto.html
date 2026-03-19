@@ -139,6 +139,9 @@
       videoId: val(f.videoId),
       hash: val(f.hash),
       githubPath: val(f.githubPath),
+      // ✅ ペア情報の抽出を追加
+      pairGroupId: val(f.pairGroupId),
+      role: val(f.role)
     };
   }
 
@@ -166,6 +169,11 @@
       const doc = await fetchFS(effectiveId);
       const log = extract(doc);
       append("📄", "Firestore ログ取得完了", "status-ok");
+
+      // ✅ ペア情報の表示を追加
+      if (log.pairGroupId && log.role) {
+        append("🔗", `ペア情報: ${log.role.toUpperCase()} (ID: ${log.pairGroupId})`, "status-warn");
+      }
 
       append("🧩", `hash(Firestore): ${log.hash}`, "status-ok");
       append("⏳", "GitHub ハッシュ取得中…");
