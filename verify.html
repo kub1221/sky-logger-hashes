@@ -198,7 +198,10 @@
       id:           v(f.id),
       videoId:      v(f.videoId),
       hash:         v(f.hash),
-      githubPath:   v(f.githubPath)
+      githubPath:   v(f.githubPath),
+      // ✅ ペア情報の抽出を追加
+      pairGroupId:  v(f.pairGroupId),
+      role:         v(f.role)
     };
   }
 
@@ -229,6 +232,12 @@
       const log = extract(doc);
 
       appendStatus("📄", `Firestore 取得成功（id=${log.id}）`, "status-ok");
+
+      // ✅ ペア情報の表示を追加
+      if (log.pairGroupId && log.role) {
+        appendStatus("🔗", `ペア撮影モードで記録されたログです（Role: ${log.role.toUpperCase()}）`);
+        appendStatus("🔗", `Pair ID: ${log.pairGroupId}`, "status-warn");
+      }
 
       // URL の ID 一致
       if (params.videoId || params.logId) {
