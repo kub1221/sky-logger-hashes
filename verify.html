@@ -96,6 +96,7 @@
     .summary-ok {
       background: rgba(23, 80, 43, 0.9);
       border: 1px solid rgba(155, 226, 143, 0.8);
+      padding-bottom: 16px; /* ボタン追加用に少し余白を広げています */
     }
     .summary-error {
       background: rgba(80, 29, 28, 0.9);
@@ -274,6 +275,32 @@
 
       if (fsVsGh) {
         setSummary("ok", "このログは改ざんされていません（完全一致）。");
+        
+        // --- 🔗 一次ソース確認ボタンの追加 ---
+        const githubBlobUrl = `https://github.com/kub1221/sky-logger-hashes/blob/main/${log.githubPath}`;
+        const commitHistoryUrl = `https://github.com/kub1221/sky-logger-hashes/commits/main/${log.githubPath}`;
+
+        const btnContainer = document.createElement("div");
+        btnContainer.style.marginTop = "16px";
+        btnContainer.style.display = "flex";
+        btnContainer.style.gap = "10px";
+        btnContainer.style.flexWrap = "wrap";
+
+        btnContainer.innerHTML = `
+          <a href="${githubBlobUrl}" target="_blank" style="text-decoration:none; font-size:11px; padding:8px 14px; background:#238636; color:white; border-radius:6px; font-weight:bold;">
+            🔍 GitHubで生の記録を確認 (一次ソース)
+          </a>
+          <a href="${commitHistoryUrl}" target="_blank" style="text-decoration:none; font-size:11px; padding:8px 14px; background:#30363d; color:white; border-radius:6px; font-weight:bold;">
+            🕒 登録日時の証跡を確認 (コミット履歴)
+          </a>
+        `;
+        // summary-ok の div を取得してボタンを追加
+        const summaryDiv = summaryEl.querySelector('.summary-ok');
+        if(summaryDiv) {
+            summaryDiv.appendChild(btnContainer);
+        }
+        // --------------------------------------
+
       } else {
         setSummary("error", "改ざんの可能性があります。詳細を確認してください。");
       }
