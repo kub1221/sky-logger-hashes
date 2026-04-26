@@ -278,7 +278,8 @@
         
         // --- 🔗 一次ソース確認ボタンの追加 ---
         const githubBlobUrl = `https://github.com/kub1221/sky-logger-hashes/blob/main/${log.githubPath}`;
-        const commitHistoryUrl = `https://github.com/kub1221/sky-logger-hashes/commits/main/${log.githubPath}`;
+        // ↓ここを commits から blame に変更しました
+        const commitHistoryUrl = `https://github.com/kub1221/sky-logger-hashes/blame/main/${log.githubPath}`;
 
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "16px";
