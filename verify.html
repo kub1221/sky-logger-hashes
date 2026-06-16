@@ -96,7 +96,7 @@
     .summary-ok {
       background: rgba(23, 80, 43, 0.9);
       border: 1px solid rgba(155, 226, 143, 0.8);
-      padding-bottom: 16px; /* ボタン追加用に少し余白を広げています */
+      padding-bottom: 16px;
     }
     .summary-error {
       background: rgba(80, 29, 28, 0.9);
@@ -107,6 +107,79 @@
       padding: 10px 20px 18px;
       font-size: 11px;
       opacity: 0.6;
+    }
+
+    /* 映像記録の真正性（Provenance）用追加スタイル */
+    .provenance-section {
+      margin-top: 40px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .provenance-accordion {
+      padding: 16px 0;
+    }
+    .provenance-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      list-style: none;
+    }
+    .provenance-summary::-webkit-details-marker {
+      display: none;
+    }
+    .provenance-summary:hover {
+      color: #f5f5f5;
+    }
+    .provenance-accordion[open] .provenance-summary {
+      color: #f5f5f5;
+      margin-bottom: 20px;
+    }
+    .provenance-accordion[open] .provenance-summary .icon {
+      transform: rotate(45deg);
+    }
+    .provenance-summary .icon {
+      transition: transform 0.2s ease;
+      font-size: 14px;
+    }
+    .provenance-content {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      line-height: 1.8;
+      text-align: left;
+    }
+    .provenance-content p {
+      margin: 0 0 16px;
+    }
+    .provenance-content h3 {
+      font-size: 13px;
+      color: #f5f5f5;
+      margin: 24px 0 12px;
+    }
+    .provenance-content ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0 0 24px;
+    }
+    .provenance-content li {
+      margin-bottom: 16px;
+    }
+    .provenance-content strong {
+      display: block;
+      color: #f5f5f5;
+      margin-bottom: 4px;
+    }
+    .note-block {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px 14px;
+      border-radius: 6px;
+      border-left: 2px solid rgba(255, 255, 255, 0.15);
+      margin-bottom: 16px;
+    }
+    .note-block p {
+      margin: 0;
     }
   </style>
 </head>
@@ -132,6 +205,45 @@
     <section>
       <div id="summary"></div>
       <div id="status" class="status-box">まだ検証は実行されていません。</div>
+    </section>
+
+    <section class="provenance-section">
+      <details class="provenance-accordion">
+        <summary class="provenance-summary">
+          <span>映像記録の真正性（Provenance）について</span>
+          <span class="icon">＋</span>
+        </summary>
+        <div class="provenance-content">
+          <p>当ページは、アプリ内で再生される映像が「特定の日時・場所に実在した空間の記録」であることを総合的に示し、作品の透明性を担保するための場所です。</p>
+
+          <h3>【システムによる証明プロセス】</h3>
+          <ul>
+            <li>
+              <strong>1. 記録（光学的署名）</strong>
+              撮影開始時、本プロジェクト専用に独自開発された内部用のスマートフォンアプリ（※一般非公開）を使用します。その画面上に現在時刻と位置情報に基づく固有のハッシュ値を生成してQRコードとして表示し、シネマカメラのレンズ前に提示します。その後、録画を一切止めることなく（ノーカットで）実際の風景の撮影へと移行し、物理的に連続した記録を行います。
+            </li>
+            <li>
+              <strong>2. 保管（公開台帳）</strong>
+              生成されたハッシュ値のデータは、事後的な改ざんを防ぐため、スマートフォンアプリでのログ取得直後に外部データベース（Firestore）および公開リポジトリ（GitHub）へ記録・保存されます。
+            </li>
+            <li>
+              <strong>3. 照合（当ページの役割）</strong>
+              本ページでは、対象となる映像のIDをもとに上記2箇所のサーバーからデータを取得し、公開台帳の記録と一切の差異がないかを自動で照合しています。画面上で「完全一致」と判定されることで、映像に付与された「記録時のログ」が改ざんされていないことがシステム的に確認できます。（より詳細なデータは、下部のボタンからGitHubの公開リポジトリにて直接ご確認いただけます）
+            </li>
+          </ul>
+
+          <div class="note-block">
+            <p><strong>※原本データの保持について</strong><br>
+            当ページでの自動照合はメタデータの整合性を確認するものですが、プロジェクトの全記録は、AI生成映像ではなく、シネマカメラ（BMCC6K FF）で撮影されたRAW素材（.braw形式）として全カット原本保管されています。<br>
+            映像冒頭 of QRコードの記録から風景の撮影にいたるまでのノーカットの連続性と、この原本データの存在が、本作の実写証明となります。</p>
+          </div>
+
+          <div class="note-block">
+            <p><strong>※システム運用開始前の初期記録に関する特例</strong><br>
+            本検証システムの運用開始以前に記録された一部の初期映像については、QRコードによる光学的署名および公開台帳への記録が行われておりません。これらはプロジェクトの原点となる記録として特例的に配信を行っています。当該映像群についても、前項と同様にRAW素材の原本保持をもって真正性の担保としています。</p>
+          </div>
+        </div>
+      </details>
     </section>
   </div>
 </main>
@@ -200,7 +312,6 @@
       videoId:      v(f.videoId),
       hash:         v(f.hash),
       githubPath:   v(f.githubPath),
-      // ✅ ペア情報の抽出を追加
       pairGroupId:  v(f.pairGroupId),
       role:         v(f.role)
     };
@@ -234,13 +345,11 @@
 
       appendStatus("📄", `Firestore 取得成功（id=${log.id}）`, "status-ok");
 
-      // ✅ ペア情報の表示を追加
       if (log.pairGroupId && log.role) {
         appendStatus("🔗", `ペア撮影モードで記録されたログです（Role: ${log.role.toUpperCase()}）`);
         appendStatus("🔗", `Pair ID: ${log.pairGroupId}`, "status-warn");
       }
 
-      // URL の ID 一致
       if (params.videoId || params.logId) {
         const urlId = params.videoId || params.logId;
         const idOk = (urlId === log.id) && (urlId === log.videoId);
@@ -251,7 +360,6 @@
         );
       }
 
-      // URL の hash と一致？
       if (params.hash) {
         const hOk = (params.hash === log.hash);
         appendStatus(hOk ? "✅" : "❌",
@@ -276,7 +384,6 @@
       if (fsVsGh) {
         setSummary("ok", "このログは改ざんされていません（完全一致）。");
         
-        // --- 🔗 一次ソース確認ボタン（統合版） ---
         const githubBlobUrl = `https://github.com/kub1221/sky-logger-hashes/blob/main/${log.githubPath}`;
 
         const btnContainer = document.createElement("div");
@@ -292,7 +399,6 @@
         if(summaryDiv) {
             summaryDiv.appendChild(btnContainer);
         }
-        // --------------------------------------
 
       } else {
         setSummary("error", "改ざんの可能性があります。詳細を確認してください。");
