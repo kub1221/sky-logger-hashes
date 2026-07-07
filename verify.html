@@ -195,7 +195,7 @@
 <main>
   <div class="wrap">
     <section>
-      <label for="idInput">videoId / logId</label>
+      <label for="idInput">videoId / skyId</label>
       <input id="idInput" type="text" placeholder="例: a25c8000-4a5a-4bbe-82cc-6f6ec65d9d0d" />
       <button id="runBtn">このIDで検証する</button>
     </section>
@@ -288,47 +288,19 @@
     return {
       videoId:  p.get("videoId")?.trim() || "",
       logId:    p.get("logId")?.trim() || "",
-      hash:     p.get("hash")?.trim() || ""
+      hash:     p.get("hash")?.trim() || "",
+      skyId:    p.get("skyId")?.trim() || "",
+      groundId: p.get("groundId")?.trim() || ""
     };
   }
 
-  // 単一ドキュメント取得
   async function fetchFirestore(id) {
     const url =
       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${COLLECTION_PATH}/${id}?key=${FIRESTORE_API_KEY}`;
     const res = await fetch(url);
-    if (res.status === 404) throw new Error("Firestore: ログが見つかりません (404)");
-    if (!res.ok) throw new Error("Firestore 取得エラー: " + res.status);
+    if (res.status === 404) throw new Error("ログが見つかりません (404)");
+    if (!res.ok) throw new Error("取得エラー: " + res.status);
     return await res.json();
-  }
-
-  // pairGroupId をキーにして GROUND 用データを検索・取得
-  async function fetchPairedGroundLog(pairGroupId) {
-    const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery?key=${FIRESTORE_API_KEY}`;
-    const query = {
-      structuredQuery: {
-        from: [{ collectionId: COLLECTION_PATH }],
-        where: {
-          compositeFilter: {
-            op: "AND",
-            filters: [
-              { fieldFilter: { field: { fieldPath: "pairGroupId" }, op: "EQUAL", value: { stringValue: pairGroupId } } },
-              { fieldFilter: { field: { fieldPath: "role" }, op: "EQUAL", value: { stringValue: "ground" } } }
-            ]
-          }
-        },
-        limit: 1
-      }
-    };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json || json.length === 0 || !json[0].document) return null;
-    return extract(json[0].document);
   }
 
   function extract(doc) {
@@ -339,16 +311,14 @@
       id:           v(f.id),
       videoId:      v(f.videoId),
       hash:         v(f.hash),
-      githubPath:   v(f.githubPath),
-      pairGroupId:  v(f.pairGroupId),
-      role:         v(f.role)
+      githubPath:   v(f.githubPath)
     };
   }
 
   async function fetchGithubHash(path) {
     const url = GITHUB_BASE_RAW + path;
     const res = await fetch(url);
-    if (!res.ok) throw new Error("GitHub 取得エラー: " + res.status);
+    if (!res.ok) throw new Error("取得エラー: " + res.status);
     return (await res.text()).trim();
   }
 
@@ -357,46 +327,35 @@
     summaryEl.innerHTML = "";
 
     const params = getUrlParams();
-    const id = idInput.value.trim() || params.videoId || params.logId;
+    const manualId = idInput.value.trim();
+    
+    // アプリからの遷移時は skyId、古いURLや手入力の場合は videoId/logId を使用
+    const skyId = manualId || params.skyId || params.videoId || params.logId;
+    // 手入力時は単体検証扱い、URL遷移時のみ groundId を使用
+    const groundId = manualId ? "" : params.groundId;
 
-    if (!id) {
-      alert("videoId / logId が指定されていません。");
+    if (!skyId) {
+      alert("検証するIDが指定されていません。");
       return;
     }
-    idInput.value = id;
+    idInput.value = skyId;
 
-    appendStatus("⏳", "【SKY】Firestore を取得中…");
+    let skyOk = false;
+    let groundOk = true; 
+    let skyLog = null;
+    let groundLog = null;
 
     try {
-      const doc = await fetchFirestore(id);
-      const skyLog = extract(doc);
-
+      // ===== SKY 検証 =====
+      appendStatus("⏳", "【SKY】Firestore を取得中…");
+      const skyDoc = await fetchFirestore(skyId);
+      skyLog = extract(skyDoc);
       appendStatus("📄", `【SKY】Firestore 取得成功（id=${skyLog.id}）`, "status-ok");
 
-      if (params.videoId || params.logId) {
-        const urlId = params.videoId || params.logId;
-        const idOk = (urlId === skyLog.id) && (urlId === skyLog.videoId);
-        appendStatus(idOk ? "✅" : "❌",
-          idOk ? "【SKY】URL の ID と Firestore の id が一致しました。" :
-                 "【SKY】URL の ID と Firestore の id が一致しません。",
-          idOk ? "status-ok" : "status-error"
-        );
-      }
-
-      if (params.hash) {
-        const hOk = (params.hash === skyLog.hash);
-        appendStatus(hOk ? "✅" : "❌",
-          hOk ? "【SKY】URL の hash と Firestore の hash が一致しました。" :
-                "【SKY】URL の hash と Firestore の hash が一致しません。",
-          hOk ? "status-ok" : "status-error"
-        );
-      }
-
       appendStatus("⏳", "【SKY】GitHub ハッシュ取得中…");
-
       const skyGh = await fetchGithubHash(skyLog.githubPath);
-      const skyOk = (skyLog.hash === skyGh);
-
+      skyOk = (skyLog.hash === skyGh);
+      
       appendStatus(
         skyOk ? "🔑" : "❌",
         skyOk ? "【SKY】Firestore と GitHub のハッシュが完全一致しました。" :
@@ -404,20 +363,16 @@
         skyOk ? "status-ok" : "status-error"
       );
 
-      let groundOk = true; 
-      let groundLog = null;
-
-      // SKY側にペア情報が存在する場合、自動でGROUNDを探索・検証
-      if (skyLog.pairGroupId && skyLog.role === 'sky') {
-        appendStatus("🔍", `ペア撮影モードを検出（Pair ID: ${skyLog.pairGroupId}）`);
-        appendStatus("⏳", "【GROUND】対となる大地の Firestore データを検索中…");
-        
-        groundLog = await fetchPairedGroundLog(skyLog.pairGroupId);
-        
-        if (groundLog) {
+      // ===== GROUND 検証 (IDが存在する場合のみ) =====
+      if (groundId) {
+        appendStatus("🔍", `【GROUND】ペアとなる大地のIDを受信（id=${groundId}）`);
+        appendStatus("⏳", "【GROUND】Firestore を取得中…");
+        try {
+          const groundDoc = await fetchFirestore(groundId);
+          groundLog = extract(groundDoc);
           appendStatus("📄", `【GROUND】Firestore 取得成功（id=${groundLog.id}）`, "status-ok");
+
           appendStatus("⏳", "【GROUND】GitHub ハッシュ取得中…");
-          
           const groundGh = await fetchGithubHash(groundLog.githubPath);
           groundOk = (groundLog.hash === groundGh);
 
@@ -427,21 +382,21 @@
                        "【GROUND】Firestore と GitHub のハッシュが一致しません。",
             groundOk ? "status-ok" : "status-error"
           );
-        } else {
-          appendStatus("⚠️", "【GROUND】対となるデータが見つかりませんでした。SKY単体として処理します。", "status-warn");
+        } catch (e) {
+          appendStatus("⚠️", `【GROUND】取得エラー: ${e.message}`, "status-warn");
+          groundOk = false;
         }
       }
 
+      // ===== 結果サマリー =====
       const isFullyVerified = skyOk && groundOk;
 
       if (isFullyVerified) {
-        if (groundLog) {
+        if (groundId && groundLog) {
            setSummary("ok", "SKY（空）および GROUND（大地）の記録は共に改ざんされていません（完全一致）。");
         } else {
            setSummary("ok", "この記録は改ざんされていません（完全一致）。");
         }
-        
-        const skyBlobUrl = `https://github.com/kub1221/sky-logger-hashes/blob/main/${skyLog.githubPath}`;
         
         const btnContainer = document.createElement("div");
         btnContainer.style.marginTop = "16px";
@@ -450,22 +405,20 @@
         btnContainer.style.gap = "8px";
 
         let html = `
-          <a href="${skyBlobUrl}" target="_blank" style="text-decoration:none; display:inline-block; font-size:12px; padding:10px 16px; background:#238636; color:white; border-radius:6px; font-weight:bold; text-align:center;">
-            🔍 [SKY] GitHubで生データと登録日時を確認
+          <a href="https://github.com/kub1221/sky-logger-hashes/blob/main/${skyLog.githubPath}" target="_blank" style="text-decoration:none; display:inline-block; font-size:12px; padding:10px 16px; background:#238636; color:white; border-radius:6px; font-weight:bold; text-align:center;">
+            🔍 [SKY] GitHubで生データを確認
           </a>
         `;
 
-        if (groundLog) {
-          const groundBlobUrl = `https://github.com/kub1221/sky-logger-hashes/blob/main/${groundLog.githubPath}`;
+        if (groundId && groundLog) {
           html += `
-            <a href="${groundBlobUrl}" target="_blank" style="text-decoration:none; display:inline-block; font-size:12px; padding:10px 16px; background:#238636; color:white; border-radius:6px; font-weight:bold; text-align:center;">
-              🔍 [GROUND] GitHubで生データと登録日時を確認
+            <a href="https://github.com/kub1221/sky-logger-hashes/blob/main/${groundLog.githubPath}" target="_blank" style="text-decoration:none; display:inline-block; font-size:12px; padding:10px 16px; background:#238636; color:white; border-radius:6px; font-weight:bold; text-align:center;">
+              🔍 [GROUND] GitHubで生データを確認
             </a>
           `;
         }
 
         btnContainer.innerHTML = html;
-        
         const summaryDiv = summaryEl.querySelector('.summary-ok');
         if(summaryDiv) {
             summaryDiv.appendChild(btnContainer);
@@ -485,7 +438,7 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     const p = getUrlParams();
-    const idParam = p.videoId || p.logId;
+    const idParam = p.skyId || p.videoId || p.logId;
     if (idParam) {
       idInput.value = idParam;
       runVerification();
