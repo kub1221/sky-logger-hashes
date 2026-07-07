@@ -322,23 +322,33 @@
     return (await res.text()).trim();
   }
 
-  async function runVerification() {
+  // isAuto: URLから自動発火した場合はtrue、手動でボタンを押した場合はfalse
+  async function runVerification(isAuto = false) {
     resetStatus();
     summaryEl.innerHTML = "";
 
     const params = getUrlParams();
-    const manualId = idInput.value.trim();
+    const urlSkyId = params.skyId || params.videoId || params.logId;
     
-    // アプリからの遷移時は skyId、古いURLや手入力の場合は videoId/logId を使用
-    const skyId = manualId || params.skyId || params.videoId || params.logId;
-    // 手入力時は単体検証扱い、URL遷移時のみ groundId を使用
-    const groundId = manualId ? "" : params.groundId;
+    let skyId = idInput.value.trim();
+    let groundId = params.groundId;
+
+    // 自動実行時
+    if (isAuto) {
+      skyId = urlSkyId;
+      idInput.value = skyId;
+    } else {
+      // 手動実行時（ユーザーが入力ボックスを直接書き換えた場合）
+      // URLに付与されていたものと違うIDが入力されたら、関連しないgroundIdは破棄する
+      if (skyId !== urlSkyId) {
+        groundId = ""; 
+      }
+    }
 
     if (!skyId) {
       alert("検証するIDが指定されていません。");
       return;
     }
-    idInput.value = skyId;
 
     let skyOk = false;
     let groundOk = true; 
@@ -434,14 +444,15 @@
     }
   }
 
-  document.getElementById("runBtn").onclick = runVerification;
+  // ボタンを押した時は isAuto=false
+  document.getElementById("runBtn").onclick = () => runVerification(false);
 
   window.addEventListener("DOMContentLoaded", () => {
     const p = getUrlParams();
     const idParam = p.skyId || p.videoId || p.logId;
     if (idParam) {
-      idInput.value = idParam;
-      runVerification();
+      // 読み込み時の自動実行は isAuto=true
+      runVerification(true);
     }
   });
 </script>
