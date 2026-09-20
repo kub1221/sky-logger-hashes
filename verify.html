@@ -87,7 +87,7 @@
     .status-ok { color: #9be28f; }
     .status-error { color: #ff6b6b; }
     .status-warn { color: #ffd166; }
-    .summary-ok, .summary-error {
+    .summary-ok, .summary-warn, .summary-error {
       margin-top: 10px;
       padding: 10px 12px;
       border-radius: 8px;
@@ -97,6 +97,10 @@
       background: rgba(23, 80, 43, 0.9);
       border: 1px solid rgba(155, 226, 143, 0.8);
       padding-bottom: 16px;
+    }
+    .summary-warn {
+      background: rgba(80, 65, 20, 0.9);
+      border: 1px solid rgba(255, 209, 102, 0.9);
     }
     .summary-error {
       background: rgba(80, 29, 28, 0.9);
@@ -278,7 +282,7 @@
   function setSummary(type, text) {
     summaryEl.innerHTML = "";
     const div = document.createElement("div");
-    div.className = type === "ok" ? "summary-ok" : "summary-error";
+    div.className = type === "ok" ? "summary-ok" : type === "warn" ? "summary-warn" : "summary-error";
     div.textContent = text;
     summaryEl.appendChild(div);
   }
@@ -328,6 +332,7 @@
     summaryEl.innerHTML = "";
 
     const params = getUrlParams();
+    const qrHash = isAuto ? params.hash : "";
     const urlSkyId = params.skyId || params.videoId || params.logId;
     
     let skyId = idInput.value.trim();
@@ -364,12 +369,25 @@
 
       appendStatus("⏳", "【SKY】GitHub ハッシュ取得中…");
       const skyGh = await fetchGithubHash(skyLog.githubPath);
-      skyOk = (skyLog.hash === skyGh);
+
+      if (qrHash) {
+        skyOk = (
+          qrHash === skyLog.hash &&
+          skyLog.hash === skyGh
+        );
+      } else {
+        skyOk = (skyLog.hash === skyGh);
+      }
       
       appendStatus(
         skyOk ? "🔑" : "❌",
-        skyOk ? "【SKY】Firestore と GitHub のハッシュが完全一致しました。" :
-                "【SKY】Firestore と GitHub のハッシュが一致しません。",
+        qrHash
+          ? (skyOk
+              ? "【SKY】QR・Firestore・GitHub のハッシュが完全一致しました。"
+              : "【SKY】QR・Firestore・GitHub のハッシュが一致しません。")
+          : (skyOk
+              ? "【SKY】Firestore と GitHub のハッシュが一致しました（QR未照合）。"
+              : "【SKY】Firestore と GitHub のハッシュが一致しません。"),
         skyOk ? "status-ok" : "status-error"
       );
 
@@ -399,13 +417,13 @@
       }
 
       // ===== 結果サマリー =====
-      const isFullyVerified = skyOk && groundOk;
+      const allChecksPassed = Boolean(qrHash) && skyOk && groundOk;
 
-      if (isFullyVerified) {
+      if (allChecksPassed) {
         if (groundId && groundLog) {
-           setSummary("ok", "SKY（空）および GROUND（大地）の記録は共に改ざんされていません（完全一致）。");
+           setSummary("ok", "SKY は QR・Firestore・GitHub の3者が一致し、GROUND は Firestore・GitHub の2者が一致しました。");
         } else {
-           setSummary("ok", "この記録は改ざんされていません（完全一致）。");
+           setSummary("ok", "QR・Firestore・GitHub の3つのハッシュが一致しました。");
         }
         
         const btnContainer = document.createElement("div");
@@ -434,8 +452,13 @@
             summaryDiv.appendChild(btnContainer);
         }
 
+      } else if (!qrHash && skyOk && groundOk) {
+        setSummary(
+          "warn",
+          "Firestore と GitHub のハッシュは一致しています。ただし QR のハッシュは未照合のため、完全検証ではありません。"
+        );
       } else {
-        setSummary("error", "改ざんの可能性があります。詳細を確認してください。");
+        setSummary("error", "ハッシュが一致しません。詳細を確認してください。");
       }
 
     } catch (e) {
